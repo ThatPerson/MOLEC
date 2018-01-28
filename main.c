@@ -39,13 +39,15 @@ float wavefunction(int n, int l, int q, float pos[3], float offset[3], int Z) {
 	float x = pos[0] - offset[0];
 	float y = pos[1] - offset[1];
 	float z = pos[2] - offset[2];
+	//printf("%f %f %f\n", x, y, z);
 	float r = sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2));
 	if (n == 1) {
 		return pow(Z, 3/2.) * pow(1/PI, 1/2.) * exp(-r);
 //	} else if (strcmp(name, "2s") == 0) {
 	} else if (n == 2) {
 		if (l == 0) {
-			return pow(Z, 3/2.) * (1/2)*pow(1/(2*PI), 1/2.) * (1 - r/2) * exp(-r/2);
+			//printf("%f %f %f %f == %f\n", pow(Z, 3/2.), (1/2.)*pow(1/(2*PI), 1/2.) ,  (1 - r/2), exp(-r/2), pow((float) Z, 3/2.) * (1/2.)*pow(1/(2*PI), 1/2.) * (1 - r/2) * exp(-r/2));
+			return pow((float) Z, 3/2.) * (1/2.)*pow(1/(2*PI), 1/2.) * (1 - r/2) * exp(-r/2);
 		} else if (l == 1) {
 			if (q == 0) {
 				return pow(Z, 3/2.) * (1 / (4*sqrt(2*PI))) * z * exp(-r/2);
@@ -92,6 +94,10 @@ float Hamiltonian(int nA, int lA, int qA, float offsetA[3], float posA[3], int Z
 	// r component
 	
 	float r = sqrt(pow(posA[0], 2) + pow(posA[1], 2) + pow(posA[2], 2));
+	if (r == 0) {
+		// We are at the center, and so the potential will make it fail.
+		return NAN;
+	}
 	
 	float dxsquu[4] = {posA[0] + alpha + beta, posA[1], posA[2]};
 	float dxsqud[4] = {posA[0] + alpha - beta, posA[1], posA[2]};
@@ -140,55 +146,27 @@ float calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, int Za, i
 	float z = 0;
 	float sA[3] = {bond_length, 0, 0};
 	float sB[3] = {0, 0, 0};
-	//float pos[3];
 	float step = 0.1;
-	
-	/*int i, thread_id;
-    int glob_nloops, priv_nloops;
-    glob_nloops = 0;
-
-    // parallelize this chunk of code
-    #pragma omp parallel private(priv_nloops, thread_id) reduction(+:glob_nloops)
-    {
-        priv_nloops = 0;
-        thread_id = omp_get_thread_num();
-
-        // parallelize this for loop
-        #pragma omp for
-        for (i=0; i<100000; ++i)
-        {
-            ++priv_nloops;
-        }
-        glob_nloops += priv_nloops;
-    }
-    printf("Total # loop iterations is %d\n",
-           glob_nloops);*/
-	int pos_x, pos_y, pos_z;
+	float pos_x, pos_y, pos_z;
 	float pos[3];
-	int priv_nloops, priv_num, priv_den;
+	int priv_nloops;
+	float priv_num, priv_den;
 	int thread_id;
-	#pragma omp parallel private(priv_num, priv_den, pos) reduction(+:numerator,denominator)
-	{
+	//#pragma omp parallel private(priv_num, priv_den, pos) reduction(+:numerator,denominator)
+	//{
 		priv_nloops = 0;
 		priv_num = 0;
 		priv_den = 0;
-		#pragma omp for
-		for (pos_x = 0; pos_x <= 1000; pos_x ++) {
-			for (pos_y = 0; pos_y <= 1000; pos_y ++) {
-				for (pos_z = 0; pos_z <= 1000; pos_z ++) {
-					//printf("%f %f %f\n", pos[0], pos[1], pos[2]);
-					pos[0] = (pos_x - 500)/10.;
-					pos[1] = (pos_y - 500)/10.;
-					pos[2] = (pos_z - 500)/10.;
-					thread_id = omp_get_thread_num();
+		//#pragma omp for
+		for (pos[0] = -50; pos[0] <= 50; pos[0]+=0.1) {
+			for (pos[1] = -50; pos[1] <= 50; pos[1]+=0.1) {
+				for (pos[2] = -50; pos[2] <= 50; pos[2]+=0.1) {
 					hammy = Hamiltonian(nA, lA, qA, sA, pos, Za);
 					AWav = wavefunction(nA, lA, qA, pos, sA, Za);
 					BWav = wavefunction(nB, lB, qB, pos, sB, Zb);
-					//printf("%f %f %f done by thread %d\n", pos[0], pos[1], pos[2], thread_id);
-					if (hammy != NAN && AWav != NAN && BWav != NAN) {
-
-						priv_num += hammy * BWav * pow(0.1, 3);
-						priv_den += AWav * BWav * pow(0.1, 3);
+					if (!isnan(hammy) && !isnan(AWav) && !isnan(BWav)) {
+						priv_num += hammy * BWav * pow(1, 3);
+						priv_den += AWav * BWav * pow(1, 3);
 					} else {
 						printf("It's non existent?\n");
 					}
@@ -197,7 +175,8 @@ float calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, int Za, i
 		}
 		numerator += priv_num;
 		denominator += priv_den;
-	}
+	//}
+	printf("%f %f\n", numerator, denominator);
 	float energy = numerator/denominator;
 	//printf("%f %f\n", numerator, denominator);
 	return energy;
@@ -224,24 +203,13 @@ float differentiate(Equation f, float pos, float accuracy, float *args) {
 
 int main(void) {
 	float ar[4] = {1, 2, 3, 4};
-	//printf("%f\n", test_case(ar, 3));
-//	printf("%f\n", integrate(&test_case, 0, 1, 0.0001, ar));
-	//printf("%f\n", differentiate(&test_case, 3, 0.0001, ar));
-
-
-
-	/*for (ar[0] = 0; ar[0] <= 3; ar[0]++) {
-		for (ar[1] = 0; ar[1] < ar[0]; ar[1]++) {
-			
-			ar[2] = 1;
-			printf("%f %f: %f\n", ar[0], ar[1], integrate(R, 0, Infinity, 0.1, ar));
-		}
-	}*/
-	
 	float rs[4] = {2, 0, 0, 1};
 	int n = 50;
-// float calculate_energy(char * nA, lA, qA, char * nB, lB, qB, int Za, int Zb, float bond_length) {
 	printf("%d, %f\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 0, n));
 	printf("%d, %f\n", n, calculate_energy(2, 0, 0, 2, 0, 0, 1, 1, 0, n));
+	printf("%d, %f\n", n, calculate_energy(2, 1, 1, 2, 1, 0, 1, 1, 0, n));
+	printf("%d, %f\n", n, calculate_energy(2, 0, 0, 3, 0, 0, 1, 1, 0, n));
+	printf("%d, %f\n", n, calculate_energy(2, 0, 0, 3, 1, 0, 1, 1, 0, n));
+	printf("%d, %f\n", n, calculate_energy(2, 0, 0, 3, 2, 0, 1, 1, 0, n));
 	return 1;
 }
