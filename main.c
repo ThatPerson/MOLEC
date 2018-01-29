@@ -158,9 +158,9 @@ float calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, int Za, i
 		priv_num = 0;
 		priv_den = 0;
 		//#pragma omp for
-		for (pos[0] = -50; pos[0] <= 50; pos[0]+=0.1) {
-			for (pos[1] = -50; pos[1] <= 50; pos[1]+=0.1) {
-				for (pos[2] = -50; pos[2] <= 50; pos[2]+=0.1) {
+		for (pos[0] = -500; pos[0] <= 500; pos[0]+=0.1) {
+			for (pos[1] = -500; pos[1] <= 500; pos[1]+=0.1) {
+				for (pos[2] = -500; pos[2] <= 500; pos[2]+=0.1) {
 					hammy = Hamiltonian(nA, lA, qA, sA, pos, Za);
 					AWav = wavefunction(nA, lA, qA, pos, sA, Za);
 					BWav = wavefunction(nB, lB, qB, pos, sB, Zb);
@@ -205,11 +205,10 @@ int main(void) {
 	float ar[4] = {1, 2, 3, 4};
 	float rs[4] = {2, 0, 0, 1};
 	int n = 50;
-	printf("%d, %f\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 0, n));
-	printf("%d, %f\n", n, calculate_energy(2, 0, 0, 2, 0, 0, 1, 1, 0, n));
-	printf("%d, %f\n", n, calculate_energy(2, 1, 1, 2, 1, 0, 1, 1, 0, n));
-	printf("%d, %f\n", n, calculate_energy(2, 0, 0, 3, 0, 0, 1, 1, 0, n));
-	printf("%d, %f\n", n, calculate_energy(2, 0, 0, 3, 1, 0, 1, 1, 0, n));
-	printf("%d, %f\n", n, calculate_energy(2, 0, 0, 3, 2, 0, 1, 1, 0, n));
+	printf("1s 1s %d, %f\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 0, n));
+	printf("2s 2s %d, %f\n", n, calculate_energy(2, 0, 0, 2, 0, 0, 1, 1, 0, n));
+	printf("2p 2p %d, %f\n", n, calculate_energy(2, 1, 1, 2, 1, 0, 1, 1, 0, n));
+	printf("1s 1s BL1 %d, %f\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 1, n));
+	printf("1s 1s BL0.5 %d, %f\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 0.5, n));
 	return 1;
 }
