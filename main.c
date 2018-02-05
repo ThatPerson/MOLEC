@@ -15,7 +15,10 @@
 #define ec 1.60217653 * pow(10, -19) 
 #define e0 8.8541878 * pow(10, -12)
 
-
+typedef struct {
+	double a;
+	double b;
+} pair;
 typedef double (*Equation)(double*, double);
 typedef double (*Wavefunction)(int, int, int, double, double, double, double, double, double);
 
@@ -40,14 +43,14 @@ double wavefunction(int n, int l, int q, double pos[3], double offset[3], int Z)
 	double x = pos[0] - offset[0];
 	double y = pos[1] - offset[1];
 	double z = pos[2] - offset[2];
-	//printf("%f %f %f\n", x, y, z);
+	//printf("%lf %lf %lf\n", x, y, z);
 	double r = sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2));
 	if (n == 1) {
 		return pow(Z, 3/2.) * pow(1/PI, 1/2.) * exp(-r);
 //	} else if (strcmp(name, "2s") == 0) {
 	} else if (n == 2) {
 		if (l == 0) {
-			//printf("%f %f %f %f == %f\n", pow(Z, 3/2.), (1/2.)*pow(1/(2*PI), 1/2.) ,  (1 - r/2), exp(-r/2), pow((double) Z, 3/2.) * (1/2.)*pow(1/(2*PI), 1/2.) * (1 - r/2) * exp(-r/2));
+			//printf("%lf %lf %lf %lf == %lf\n", pow(Z, 3/2.), (1/2.)*pow(1/(2*PI), 1/2.) ,  (1 - r/2), exp(-r/2), pow((double) Z, 3/2.) * (1/2.)*pow(1/(2*PI), 1/2.) * (1 - r/2) * exp(-r/2));
 			return pow((double) Z, 3/2.) * (1/2.)*pow(1/(2*PI), 1/2.) * (1 - r/2) * exp(-r/2);
 		} else if (l == 1) {
 			if (q == 0) {
@@ -120,7 +123,6 @@ double Hamiltonian(int nA, int lA, int qA, double offsetA[3], double posA[3], in
 	double dzsqdu[4] = {posA[0], posA[1], posA[2] - alpha + beta};
 	double dzsqdd[4] = {posA[0], posA[1], posA[2] - alpha - beta};
 	
-	//printf("[%f %f %f], [%f %f %f];; \n[%f %f %f], [%f %f %f]\n", 
 	//		dxsquu[0], dxsquu[1], dxsquu[2], dxsquu[3], 
 	//		dxsqud[0], dxsqud[1], dxsqud[2], dxsqud[3], 
 	//		dxsqdu[0], dxsqdu[1], dxsqdu[2], dxsqdu[3], 
@@ -130,31 +132,35 @@ double Hamiltonian(int nA, int lA, int qA, double offsetA[3], double posA[3], in
    //  D[D[Hx[x, y, z], y], y] - D[D[Hx[x, y, z], z], z]) - 
    //  10/Sqrt[x^2 + y^2 + z^2] Hx[x, y, z];
 	
-	/* Okay so the new issue is we aren't calculating our secondary differentials correctly!!! */
+	
+	
+	/* Work out how to map this onto the actual values.!!!!!!!!!!!!!! */
 	
 	
 	double dxsq = (((wavefunction(nA, lA, qA, dxsquu, offsetA, Z) - wavefunction(nA, lA, qA, dxsqud, offsetA, Z)) / (2*beta)) - ((wavefunction(nA, lA, qA, dxsqdu, offsetA, Z) - wavefunction(nA, lA, qA, dxsqdd, offsetA, Z)) / (2*beta))) / (2*alpha);
-	
 	double dysq = (((wavefunction(nA, lA, qA, dysquu, offsetA, Z) - wavefunction(nA, lA, qA, dysqud, offsetA, Z)) / (2*beta)) - ((wavefunction(nA, lA, qA, dysqdu, offsetA, Z) - wavefunction(nA, lA, qA, dysqdd, offsetA, Z)) / (2*beta))) / (2*alpha);
-		
 	double dzsq = (((wavefunction(nA, lA, qA, dzsquu, offsetA, Z) - wavefunction(nA, lA, qA, dzsqud, offsetA, Z)) / (2*beta)) - ((wavefunction(nA, lA, qA, dzsqdu, offsetA, Z) - wavefunction(nA, lA, qA, dzsqdd, offsetA, Z)) / (2*beta))) / (2*alpha);
 	
-	//printf("%f %f %f :SQUARES: %f %f %f\n", posA[0], posA[1], posA[2], dxsq, dysq, dzsq);
+	//printf("%lf %lf %lf :SQUARES: %lf %lf %lf\n", posA[0], posA[1], posA[2], dxsq, dysq, dzsq);
 	
-	double kineticenergy = - (2.64589 * pow(10, -11)) * (dxsq + dysq + dzsq);
+	double a = 6.10426 * pow(10, 1);
+	double b = 2.30708 * pow(10, 12);
 	
-	double potentialenergy = - 1 *Z / r;
-	
+	double kineticenergy = - a * (dxsq + dysq + dzsq);
+	double potentialenergy = - b * wavefunction(nA, lA, qA, posA, offsetA, Z) * Z / r;
 	double totalenergy = kineticenergy + potentialenergy;
 	
 	
 	
-	//printf("%f %f %f %f\n", rse, thetase, nA, lA, qAse, chase);
+	//printf("%lf %lf %lf %lf\n", rse, thetase, nA, lA, qAse, chase);
 	
-	return (double)totalenergy;
+	return (double)totalenergy * (2.1673 * pow(10, -13));
 }
 
-double calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, int Za, int Zb, double bond_length, int siz) {
+pair calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, int Za, int Zb, double bond_length, int siz) {
+
+	/* My current assumption would be that you'd need two functions - H, and S. H does the Hermitian part, S does the overlap part. Then you can directly use those in the MO calculations, and in normal use can just to like Hii/Sii */
+
 	double numerator = 0;
 	double denominator = 0;
 
@@ -180,7 +186,7 @@ double calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, int Za, 
 		priv_den = 0;
 		double r, theta, phi;
 		//#pragma omp for
-		for (r = 0.01; r <= 50; r+=0.01) {
+		for (r = 0.01; r <= 40; r+=0.01) {
 			for (theta = 0.01; theta <= PI; theta+=0.1) {
 				for (phi = 0.01; phi <= 2 * PI; phi+=0.1) {
 					pos[0] = r * cos(phi) * sin(theta);
@@ -201,12 +207,16 @@ double calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, int Za, 
 		numerator += priv_num;
 		denominator += priv_den;
 	//}
-	printf("%f %f\n", numerator, denominator);
+	printf("%lf %lf\n", numerator, denominator);
+	pair xl;
+	xl.a = numerator;
+	xl.b = denominator;
 	double energy = numerator/denominator;
-	//printf("%f %f\n", numerator, denominator);
-	return energy;
+	//printf("%lf %lf\n", numerator, denominator);
+	return xl;
 	
 }
+
 
 
 double integrate(Equation f, double lower_range, double upper_range, double step, double * args) {
@@ -214,8 +224,8 @@ double integrate(Equation f, double lower_range, double upper_range, double step
 	double sum = 0;
 	for (l = lower_range; l <= upper_range; l += step) {
 		sum += pow(l * f(args, l), 2) * step; 
-		//printf("%f\n", f(args, l));
-		//printf("%f %f\n", sum, f(args, l));
+		//printf("%lf\n", f(args, l));
+		//printf("%lf %lf\n", sum, f(args, l));
 	}
 	return sum;
 }
@@ -232,7 +242,7 @@ int main(void) {
 	int n = 50;
 	
 	
-	double hammy, r, theta, phi;		
+	/*double hammy, r, theta, phi;		
 	double pos[3];
 	double s[3] = {0, 0, 0};
 	for (theta = 0; theta < 3.14; theta += 0.1) {
@@ -243,24 +253,73 @@ int main(void) {
 		pos[1] = r * sin(phi) * sin(theta);
 		pos[2] = r * cos(theta);
 		hammy = Hamiltonian(1, 0, 0, s, pos, 1);
-		printf("%f, %f\n", theta, hammy);
+		printf("%lf, %lf\n", theta, hammy);
+	}*/
+	
+	long double ns = 0.000000001;
+	printf("%Lf\n", ns);
+	
+	int orbitals[5][3];
+	orbitals[0][0] = 1;
+	orbitals[0][1] = 0;
+	orbitals[0][2] = 0;
+	orbitals[1][0] = 2;
+	orbitals[1][1] = 0;
+	orbitals[1][2] = 0;
+	orbitals[2][0] = 2;
+	orbitals[2][1] = 1;
+	orbitals[2][2] = 0;
+	orbitals[3][0] = 2;
+	orbitals[3][1] = 1;
+	orbitals[3][2] = 1;
+	orbitals[4][0] = 2;
+	orbitals[4][1] = 1;
+	orbitals[4][2] = 2;
+	
+	/*printf("1s 1s %d, %lf\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 0, n));
+	printf("2s 2s %d, %lf\n", n, calculate_energy(2, 0, 0, 2, 0, 0, 1, 1, 0, n));
+	printf("3s 3s %d, %lf\n", n, calculate_energy(3, 0, 0, 3, 0, 0, 1, 1, 0, n));
+	printf("2p 2p %d, %lf\n", n, calculate_energy(2, 1, 0, 2, 1, 1, 1, 1, 0, n));
+	printf("3p 3p %d, %lf\n", n, calculate_energy(3, 1, 0, 3, 1, 0, 1, 1, 0, n));
+	printf("3d 3d %d, %lf\n", n, calculate_energy(3, 2, 0, 3, 2, 0, 1, 1, 0, n));
+	
+	printf("1s 1s BL1.6 %d, %lf\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 1.6 * pow(10, -8), n));
+	printf("1s 1s BL1.4 %d, %lf\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 1.4 * pow(10, -8), n));
+	printf("1s 1s BL1.2 %d, %lf\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 1.2 * pow(10, -8), n));
+	printf("1s 1s BL1.0 %d, %lf\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 1.0 * pow(10, -8), n));
+	printf("1s 1s BL0.8 %d, %lf\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 0.8 * pow(10, -8), n));
+	printf("1s 1s BL0.6 %d, %lf\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 0.6 * pow(10, -8), n));
+	printf("1s 1s BL0.4 %d, %lf\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 0.4 * pow(10, -8), n));*/
+	
+	float Ss[5][5];
+	float Hs[5][5];
+	pair xs;
+	int x, y;
+	for (x = 0; x < 5; x++) {
+		for (y = 0; y < 5; y++) {
+
+			xs = calculate_energy(orbitals[x][0], orbitals[x][1], orbitals[x][2], orbitals[y][0], orbitals[y][1], orbitals[y][2], 1, 1, 1.0, n);
+			Ss[x][y] = xs.b/10000;
+			Hs[x][y] = xs.a/10000;
+			
+		}
+	}
+	
+	printf("H\n");
+	for (x = 0; x < 5; x++) {
+		for (y = 0; y < 5; y++) {
+			printf("%0.4f\t", Hs[x][y]);
+		}
+		printf("\n");
+	}
+	printf("S\n");
+	for (x = 0; x < 5; x++) {
+		for (y = 0; y < 5; y++) {
+			printf("%0.4f\t", Ss[x][y]);
+		}
+		printf("\n");
 	}
 	
 	
-	
-	printf("1s 1s %d, %f\n", n, calculate_energy(1, 0, 0, 2, 0, 0, 1, 1, 0, n));
-	printf("2s 2s %d, %f\n", n, calculate_energy(2, 0, 0, 2, 0, 0, 1, 1, 0, n));
-	printf("3s 3s %d, %f\n", n, calculate_energy(3, 0, 0, 3, 0, 0, 1, 1, 0, n));
-	printf("2p 2p %d, %f\n", n, calculate_energy(2, 1, 0, 2, 1, 1, 1, 1, 0, n));
-	printf("3p 3p %d, %f\n", n, calculate_energy(3, 1, 0, 3, 1, 0, 1, 1, 0, n));
-	printf("3d 3d %d, %f\n", n, calculate_energy(3, 2, 0, 3, 2, 0, 1, 1, 0, n));
-	
-	printf("1s 1s BL1.6 %d, %f\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 1.6, n));
-	printf("1s 1s BL1.4 %d, %f\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 1.4, n));
-	printf("1s 1s BL1.2 %d, %f\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 1.2, n));
-	printf("1s 1s BL1.0 %d, %f\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 1.0, n));
-	printf("1s 1s BL0.8 %d, %f\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 0.8, n));
-	printf("1s 1s BL0.6 %d, %f\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 0.6, n));
-	printf("1s 1s BL0.4 %d, %f\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 0.4, n));
 	return 1;
 }
