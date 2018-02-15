@@ -22,6 +22,39 @@ typedef struct {
 typedef double (*Equation)(double*, double);
 typedef double (*Wavefunction)(int, int, int, double, double, double, double, double, double);
 
+float det(float m[50][50], int dimensions);
+float det(float m[50][50], int dimensions) {
+	int i, x, y, a, b;
+	if (dimensions == 1) {
+		return m[0][0];
+	}
+	
+	float o[50][50];
+	float prod = 0;
+	
+	int max_dim = dimensions - 1;
+	for (i = 0; i < dimensions; i++) {
+		a = 0; b = 0;
+		for (x = 1; x < dimensions; x++) {	
+			for (y = 0; y < dimensions; y++) {
+				if (y != i) {
+					o[a][b] = m[x][y];
+					
+					a++;
+					if (a > max_dim-1) {
+						a = 0;
+						b++;
+					}
+					
+				}
+				
+			}
+		}
+		prod = prod + pow(-1, i) * m[0][i] * det(o, dimensions - 1);
+	}
+	return prod;
+}
+
 double det2(double H[2][2], double S[2][2], double E) {
 	//[ H00 - ES00	H10 - ES10 ]
 	//[ H01 - ES01	H11 - ES11 ]
@@ -36,6 +69,7 @@ double det3(double H[3][3], double S[3][3], double E) {
 	double fum = fe + fi + fo;
 	return fum;
 }	
+
 
 
 double wavefunction(int n, int l, int q, double pos[3], double offset[3], int Z) {
@@ -259,22 +293,17 @@ int main(void) {
 	long double ns = 0.000000001;
 	printf("%Lf\n", ns);
 	
-	int orbitals[5][3];
+	int orbitals[3][3];
 	orbitals[0][0] = 1;
 	orbitals[0][1] = 0;
 	orbitals[0][2] = 0;
-	orbitals[1][0] = 2;
+	orbitals[1][0] = 1;
 	orbitals[1][1] = 0;
 	orbitals[1][2] = 0;
-	orbitals[2][0] = 2;
-	orbitals[2][1] = 1;
+	orbitals[2][0] = 1;
+	orbitals[2][1] = 0;
 	orbitals[2][2] = 0;
-	orbitals[3][0] = 2;
-	orbitals[3][1] = 1;
-	orbitals[3][2] = 1;
-	orbitals[4][0] = 2;
-	orbitals[4][1] = 1;
-	orbitals[4][2] = 2;
+	
 	
 	/*printf("1s 1s %d, %lf\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 0, n));
 	printf("2s 2s %d, %lf\n", n, calculate_energy(2, 0, 0, 2, 0, 0, 1, 1, 0, n));
@@ -295,10 +324,10 @@ int main(void) {
 	float Hs[5][5];
 	pair xs;
 	int x, y;
-	for (x = 0; x < 5; x++) {
-		for (y = 0; y < 5; y++) {
+	for (x = 0; x < 3; x++) {
+		for (y = 0; y < 3; y++) {
 
-			xs = calculate_energy(orbitals[x][0], orbitals[x][1], orbitals[x][2], orbitals[y][0], orbitals[y][1], orbitals[y][2], 1, 1, 1.0, n);
+			xs = calculate_energy(orbitals[x][0], orbitals[x][1], orbitals[x][2], orbitals[y][0], orbitals[y][1], orbitals[y][2], 1, 1, abs(x - y), n);
 			Ss[x][y] = xs.b/10000;
 			Hs[x][y] = xs.a/10000;
 			
@@ -306,15 +335,15 @@ int main(void) {
 	}
 	
 	printf("H\n");
-	for (x = 0; x < 5; x++) {
-		for (y = 0; y < 5; y++) {
+	for (x = 0; x < 3; x++) {
+		for (y = 0; y < 3; y++) {
 			printf("%0.4f\t", Hs[x][y]);
 		}
 		printf("\n");
 	}
 	printf("S\n");
-	for (x = 0; x < 5; x++) {
-		for (y = 0; y < 5; y++) {
+	for (x = 0; x < 3; x++) {
+		for (y = 0; y < 3; y++) {
 			printf("%0.4f\t", Ss[x][y]);
 		}
 		printf("\n");
