@@ -24,6 +24,10 @@ typedef double (*Wavefunction)(int, int, int, double, double, double, double, do
 
 float det(float m[50][50], int dimensions);
 float det(float m[50][50], int dimensions) {
+
+/* TODO: Calculate minimum energy orbital (H/S for the orbital and itself, for all orbitals present) and maximum. Add half the difference to the top and bottom, and then go over in steps of ~0.01 and look for changes of sign. Mark down and output.
+	Also find out what on earth the units are - run the program for a range of distances and then calculate actual for like 100pm in Mathematica and find where it intersects */
+
 	int i, x, y, a, b;
 	if (dimensions == 1) {
 		return m[0][0];
@@ -125,11 +129,11 @@ double wavefunction(int n, int l, int q, double pos[3], double offset[3], int Z)
 	}
 }
 
-double Hamiltonian(int nA, int lA, int qA, double offsetA[3], double posA[3], int Z) {
+double hamiltonian(int nA, int lA, int qA, double offsetA[3], double posA[3], int Z) {
 /* This is the problem!!! */
 
 
-	// Numerical Form of Hamiltonian
+	// Numerical Form of hamiltonian
 	double alpha = 0.01;
 	double beta = 0.001; // Beta needs to be smaller than alpha
 	// r component
@@ -193,8 +197,6 @@ double Hamiltonian(int nA, int lA, int qA, double offsetA[3], double posA[3], in
 
 pair calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, int Za, int Zb, double bond_length, int siz) {
 
-	/* My current assumption would be that you'd need two functions - H, and S. H does the Hermitian part, S does the overlap part. Then you can directly use those in the MO calculations, and in normal use can just to like Hii/Sii */
-
 	double numerator = 0;
 	double denominator = 0;
 
@@ -220,13 +222,13 @@ pair calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, int Za, in
 		priv_den = 0;
 		double r, theta, phi;
 		//#pragma omp for
-		for (r = 0.01; r <= 40; r+=0.01) {
+		for (r = 0.01; r <= 40; r+=0.1) {
 			for (theta = 0.01; theta <= PI; theta+=0.1) {
 				for (phi = 0.01; phi <= 2 * PI; phi+=0.1) {
 					pos[0] = r * cos(phi) * sin(theta);
 					pos[1] = r * sin(phi) * sin(theta);
 					pos[2] = r * cos(theta);
-					hammy = Hamiltonian(nA, lA, qA, sA, pos, Za);
+					hammy = hamiltonian(nA, lA, qA, sA, pos, Za);
 					AWav = wavefunction(nA, lA, qA, pos, sA, Za);
 					BWav = wavefunction(nB, lB, qB, pos, sB, Zb);
 					if (!isnan(hammy) && !isnan(AWav) && !isnan(BWav)) {
@@ -270,6 +272,14 @@ double differentiate(Equation f, double pos, double accuracy, double *args) {
 	return (f(args,upper) - f(args, lower))/accuracy;
 }
 
+int switched(float a, float b) {
+	if (a >= 0 && b < 0)
+		return 1;
+	if (b >= 0 && a < 0)
+		return 1;
+	return 0;
+}
+
 int main(void) {
 	double ar[4] = {1, 2, 3, 4};
 	double rs[4] = {2, 0, 0, 1};
@@ -286,7 +296,7 @@ int main(void) {
 		pos[0] = r * cos(phi) * sin(theta);
 		pos[1] = r * sin(phi) * sin(theta);
 		pos[2] = r * cos(theta);
-		hammy = Hamiltonian(1, 0, 0, s, pos, 1);
+		hammy = hamiltonian(1, 0, 0, s, pos, 1);
 		printf("%lf, %lf\n", theta, hammy);
 	}*/
 	
@@ -300,55 +310,74 @@ int main(void) {
 	orbitals[1][0] = 1;
 	orbitals[1][1] = 0;
 	orbitals[1][2] = 0;
-	orbitals[2][0] = 1;
-	orbitals[2][1] = 0;
-	orbitals[2][2] = 0;
-	
-	
-	/*printf("1s 1s %d, %lf\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 0, n));
-	printf("2s 2s %d, %lf\n", n, calculate_energy(2, 0, 0, 2, 0, 0, 1, 1, 0, n));
-	printf("3s 3s %d, %lf\n", n, calculate_energy(3, 0, 0, 3, 0, 0, 1, 1, 0, n));
-	printf("2p 2p %d, %lf\n", n, calculate_energy(2, 1, 0, 2, 1, 1, 1, 1, 0, n));
-	printf("3p 3p %d, %lf\n", n, calculate_energy(3, 1, 0, 3, 1, 0, 1, 1, 0, n));
-	printf("3d 3d %d, %lf\n", n, calculate_energy(3, 2, 0, 3, 2, 0, 1, 1, 0, n));
-	
-	printf("1s 1s BL1.6 %d, %lf\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 1.6 * pow(10, -8), n));
-	printf("1s 1s BL1.4 %d, %lf\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 1.4 * pow(10, -8), n));
-	printf("1s 1s BL1.2 %d, %lf\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 1.2 * pow(10, -8), n));
-	printf("1s 1s BL1.0 %d, %lf\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 1.0 * pow(10, -8), n));
-	printf("1s 1s BL0.8 %d, %lf\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 0.8 * pow(10, -8), n));
-	printf("1s 1s BL0.6 %d, %lf\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 0.6 * pow(10, -8), n));
-	printf("1s 1s BL0.4 %d, %lf\n", n, calculate_energy(1, 0, 0, 1, 0, 0, 1, 1, 0.4 * pow(10, -8), n));*/
 	
 	float Ss[5][5];
 	float Hs[5][5];
 	pair xs;
-	int x, y;
-	for (x = 0; x < 3; x++) {
-		for (y = 0; y < 3; y++) {
-
-			xs = calculate_energy(orbitals[x][0], orbitals[x][1], orbitals[x][2], orbitals[y][0], orbitals[y][1], orbitals[y][2], 1, 1, abs(x - y), n);
+	int x, y, dim = 2;
+	float bond_length = 2;
+	float energy_a[100];
+	float energy_b[100];
+	for (bond_length = 0.1; bond_length < 10; bond_length += 0.1) {
+	printf("%f ==============================\n", bond_length);
+	for (x = 0; x < dim; x++) {
+		for (y = x; y < dim; y++) {
+			/// pair calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, int Za, int Zb, double bond_length, int siz) {
+			xs = calculate_energy(orbitals[x][0], orbitals[x][1], orbitals[x][2], orbitals[y][0], orbitals[y][1], orbitals[y][2], 1, 1, abs(x - y) * bond_length, n);
 			Ss[x][y] = xs.b/10000;
 			Hs[x][y] = xs.a/10000;
+			Ss[y][x] = xs.b/10000;
+			Hs[y][x] = xs.a/10000;
 			
 		}
 	}
 	
 	printf("H\n");
-	for (x = 0; x < 3; x++) {
-		for (y = 0; y < 3; y++) {
+	for (x = 0; x < dim; x++) {
+		for (y = 0; y < dim; y++) {
 			printf("%0.4f\t", Hs[x][y]);
 		}
 		printf("\n");
 	}
 	printf("S\n");
-	for (x = 0; x < 3; x++) {
-		for (y = 0; y < 3; y++) {
+	for (x = 0; x < dim; x++) {
+		for (y = 0; y < dim; y++) {
 			printf("%0.4f\t", Ss[x][y]);
 		}
 		printf("\n");
 	}
 	
-	
+	float E;
+	float prev;
+	float curr;
+	float m[50][50];
+	float switching_points[50];
+	int curr_s = 0;
+	for (E = -10; E <= 0; E+=0.001) {
+		for (x = 0; x < dim; x++) {
+			for (y = 0; y < dim; y++) {
+				m[x][y] = Hs[x][y] - E * Ss[x][y];
+			}
+		}	
+		prev = curr;
+		curr = det(m, dim);
+		if (E != 0) {
+			if (switched(prev, curr) == 1) {
+				printf("%f ===================\n", E);
+				switching_points[curr_s] = E;
+				curr_s++;
+			}
+		}
+		//printf("%f, %f\n", E, curr);
+	}
+	for (x = 0; x < curr_s; x ++) {
+		printf("%f\n", switching_points[x]);
+	}
+	energy_a[(int)(bond_length * 10)] = switching_points[0];
+	energy_b[(int)(bond_length * 10)] = switching_points[1];
+	}
+	for (bond_length = 0.1; bond_length < 10; bond_length += 0.1) {
+		printf("%f, %f, %f\n", bond_length, energy_a[(int)(bond_length * 10)], energy_b[(int)(bond_length * 10)]);
+	}
 	return 1;
 }
