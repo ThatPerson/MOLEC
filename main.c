@@ -129,7 +129,7 @@ double wavefunction(int n, int l, int q, double pos[3], double offset[3], int Z)
 	}
 }
 
-double hamiltonian(int nA, int lA, int qA, double offsetA[3], double posA[3], int Z) {
+double hamiltonian(int nA, int lA, int qA, double offsetA[3], double posA[3], int Z, int ZB, double posB[3]) {
 /* This is the problem!!! */
 
 
@@ -141,11 +141,14 @@ double hamiltonian(int nA, int lA, int qA, double offsetA[3], double posA[3], in
 	//posA[1] = posA[1]/10;
 	//posA[2] = posA[2]/10;
 	double r = sqrt(pow(posA[0], 2) + pow(posA[1], 2) + pow(posA[2], 2));
+	double rB = sqrt(pow(posB[0] - posA[0], 2) + pow(posB[1] - posA[1], 2) + pow(posB[2] - posA[2], 2));
 	if (r == 0) {
 		// We are at the center, and so the potential will make it fail.
 		return NAN;
 	}
-	
+	if (rB == 0) {
+		rB = 0.001;
+	}
 	double dxsquu[4] = {posA[0] + alpha + beta, posA[1], posA[2]};
 	double dxsqud[4] = {posA[0] + alpha - beta, posA[1], posA[2]};
 	double dxsqdu[4] = {posA[0] - alpha + beta, posA[1], posA[2]};
@@ -181,18 +184,22 @@ double hamiltonian(int nA, int lA, int qA, double offsetA[3], double posA[3], in
 	
 	//printf("%lf %lf %lf :SQUARES: %lf %lf %lf\n", posA[0], posA[1], posA[2], dxsq, dysq, dzsq);
 	
-	double a = 6.10426 * pow(10, 1);
-	double b = 2.30708 * pow(10, 12);
+	double a = 1/2.;
+	double b = 1;
 	
+	//double a = 1;
+	//double b = 1;
 	double kineticenergy = - a * (dxsq + dysq + dzsq);
 	double potentialenergy = - b * wavefunction(nA, lA, qA, posA, offsetA, Z) * Z / r;
-	double totalenergy = kineticenergy + potentialenergy;
+	double otheratom = - b * wavefunction(nA, lA, qA, posA, offsetA, Z) * ZB / rB;
+	//printf("%f %f %f\n", kineticenergy, potentialenergy, otheratom);
+	double totalenergy = kineticenergy + (potentialenergy + otheratom);
 	
 	
 	
 	//printf("%lf %lf %lf %lf\n", rse, thetase, nA, lA, qAse, chase);
 	
-	return (double)totalenergy * (2.1673 * pow(10, -13));
+	return (double)totalenergy/* * (2.1673 * pow(10, -13))*/;
 }
 
 pair calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, int Za, int Zb, double bond_length, int siz) {
@@ -228,7 +235,11 @@ pair calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, int Za, in
 					pos[0] = r * cos(phi) * sin(theta);
 					pos[1] = r * sin(phi) * sin(theta);
 					pos[2] = r * cos(theta);
-					hammy = hamiltonian(nA, lA, qA, sA, pos, Za);
+					
+			//		double hamiltonian(int nA, int lA, int qA, double offsetA[3], double posA[3], int Z, int ZB, double posB[3]) {
+			//		double wavefunction(int n, int l, int q, double pos[3], double offset[3], int Z) {
+					
+					hammy = hamiltonian(nA, lA, qA, sA, pos, Za, Zb, sB);
 					AWav = wavefunction(nA, lA, qA, pos, sA, Za);
 					BWav = wavefunction(nB, lB, qB, pos, sB, Zb);
 					if (!isnan(hammy) && !isnan(AWav) && !isnan(BWav)) {
@@ -311,6 +322,8 @@ int main(void) {
 	orbitals[1][1] = 0;
 	orbitals[1][2] = 0;
 	
+	/* -1.5 for 1s, -0.375 for 2s, -0.167 for 3s */
+	
 	float Ss[5][5];
 	float Hs[5][5];
 	pair xs;
@@ -318,16 +331,16 @@ int main(void) {
 	float bond_length = 2;
 	float energy_a[100];
 	float energy_b[100];
-	for (bond_length = 0.1; bond_length < 10; bond_length += 0.1) {
+	for (bond_length = 0.1; bond_length < 5; bond_length += 0.1) {
 	printf("%f ==============================\n", bond_length);
 	for (x = 0; x < dim; x++) {
 		for (y = x; y < dim; y++) {
 			/// pair calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, int Za, int Zb, double bond_length, int siz) {
 			xs = calculate_energy(orbitals[x][0], orbitals[x][1], orbitals[x][2], orbitals[y][0], orbitals[y][1], orbitals[y][2], 1, 1, abs(x - y) * bond_length, n);
-			Ss[x][y] = xs.b/10000;
-			Hs[x][y] = xs.a/10000;
-			Ss[y][x] = xs.b/10000;
-			Hs[y][x] = xs.a/10000;
+			Ss[x][y] = xs.b;
+			Hs[x][y] = xs.a;
+			Ss[y][x] = xs.b;
+			Hs[y][x] = xs.a;
 			
 		}
 	}
@@ -353,7 +366,7 @@ int main(void) {
 	float m[50][50];
 	float switching_points[50];
 	int curr_s = 0;
-	for (E = -10; E <= 0; E+=0.001) {
+	for (E = -6; E <= 0; E+=0.001) {
 		for (x = 0; x < dim; x++) {
 			for (y = 0; y < dim; y++) {
 				m[x][y] = Hs[x][y] - E * Ss[x][y];
@@ -376,7 +389,7 @@ int main(void) {
 	energy_a[(int)(bond_length * 10)] = switching_points[0];
 	energy_b[(int)(bond_length * 10)] = switching_points[1];
 	}
-	for (bond_length = 0.1; bond_length < 10; bond_length += 0.1) {
+	for (bond_length = 0.1; bond_length < 5; bond_length += 0.1) {
 		printf("%f, %f, %f\n", bond_length, energy_a[(int)(bond_length * 10)], energy_b[(int)(bond_length * 10)]);
 	}
 	return 1;
