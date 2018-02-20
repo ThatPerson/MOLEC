@@ -19,6 +19,14 @@ typedef struct {
 	double a;
 	double b;
 } pair;
+
+typedef struct {
+	int orbitals[50][3];
+	int num_orbitals;
+	float pos[3];
+	float zeff;
+} atom;
+
 typedef double (*Equation)(double*, double);
 typedef double (*Wavefunction)(int, int, int, double, double, double, double, double, double);
 
@@ -59,20 +67,6 @@ float det(float m[50][50], int dimensions) {
 	return prod;
 }
 
-double det2(double H[2][2], double S[2][2], double E) {
-	//[ H00 - ES00	H10 - ES10 ]
-	//[ H01 - ES01	H11 - ES11 ]
-	
-	return ((H[1][1] - E*S[1][1]) * (H[0][0] - E*S[0][0])) - ((H[1][0] - E*S[1][0]) * (H[0][1] - E*S[0][1]));
-}
-
-double det3(double H[3][3], double S[3][3], double E) {
-	double fe = (H[0][0] - E*S[0][0]) * (((H[1][1] - E*S[1][1]) * (H[2][2] - E*S[2][2])) - ((H[2][1] - E*S[2][1]) * (H[1][2] - E*S[1][2])));
-	double fi = (H[1][0] - E*S[1][0]) * (((H[0][1] - E*S[0][1]) * (H[2][2] - E*S[2][2])) - ((H[2][1] - E*S[2][1]) * (H[0][2] - E*S[0][2])));
-	double fo = (H[2][0] - E*S[2][0]) * (((H[0][1] - E*S[0][1]) * (H[1][2] - E*S[1][2])) - ((H[0][2] - E*S[0][2]) * (H[1][1] - E*S[1][1])));
-	double fum = fe + fi + fo;
-	return fum;
-}	
 
 
 
@@ -295,39 +289,39 @@ int main(void) {
 	double ar[4] = {1, 2, 3, 4};
 	double rs[4] = {2, 0, 0, 1};
 	int n = 50;
+	typedef struct {
+		int orbitals[50][3];
+		int num_orbitals;
+		float pos[3];
+		float zeff;
+	} atom;
 	
-	
-	/*double hammy, r, theta, phi;		
-	double pos[3];
-	double s[3] = {0, 0, 0};
-	for (theta = 0; theta < 3.14; theta += 0.1) {
-		r = 2;
-		//theta = 1;
-		phi = 1;
-		pos[0] = r * cos(phi) * sin(theta);
-		pos[1] = r * sin(phi) * sin(theta);
-		pos[2] = r * cos(theta);
-		hammy = hamiltonian(1, 0, 0, s, pos, 1);
-		printf("%lf, %lf\n", theta, hammy);
-	}*/
-	
-	long double ns = 0.000000001;
-	printf("%Lf\n", ns);
-	
-	int orbitals[3][3];
-	orbitals[0][0] = 1;
-	orbitals[0][1] = 0;
-	orbitals[0][2] = 0;
-	orbitals[1][0] = 1;
-	orbitals[1][1] = 0;
-	orbitals[1][2] = 0;
+	atom atoms[5];
+	int num_atoms = 2;
+	atoms[0].orbitals[0][0] = 1;
+	atoms[0].orbitals[0][1] = 0;
+	atoms[0].orbitals[0][2] = 0;
+	atoms[0].num_orbitals = 1;
+	atoms[0].pos[0] = 0;
+	atoms[0].pos[1] = 0;
+	atoms[0].pos[2] = 0;
+	atoms[0].zeff = 0.7;
+	atoms[1].orbitals[0][0] = 1;
+	atoms[1].orbitals[0][1] = 0;
+	atoms[1].orbitals[0][2] = 0;
+	atoms[1].num_orbitals = 1;
+	atoms[1].pos[0] = 1;
+	atoms[1].pos[1] = 0;
+	atoms[1].pos[2] = 0;
+	atoms[1].zeff = 0.7;
+
 	
 	/* -1.5 for 1s, -0.375 for 2s, -0.167 for 3s */
 	
-	float Ss[5][5];
-	float Hs[5][5];
+	float Ss[50][50];
+	float Hs[50][50];
 	pair xs;
-	int x, y, dim = 2;
+	int x, y, dim = 3;
 	float bond_length = 2;
 	float energy_a[100];
 	float energy_b[100];
