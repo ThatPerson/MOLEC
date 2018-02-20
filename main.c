@@ -5,6 +5,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <omp.h>
+#include <glpk.h>
+
 
 #define Infinity 100
 #define PI 3.14159265358
@@ -70,7 +72,7 @@ float det(float m[50][50], int dimensions) {
 
 
 
-double wavefunction(int n, int l, int q, double pos[3], double offset[3], int Z) {
+double wavefunction(int n, int l, int q, double pos[3], double offset[3], float Z) {
 	// args is [n, l, m, Z]
 	double x = pos[0] - offset[0];
 	double y = pos[1] - offset[1];
@@ -121,9 +123,10 @@ double wavefunction(int n, int l, int q, double pos[3], double offset[3], int Z)
 		printf("I don't recognise that orbital..\n");
 		exit(1);
 	}
+	return -1;
 }
 
-double hamiltonian(int nA, int lA, int qA, double offsetA[3], double posA[3], int Z, int ZB, double posB[3]) {
+double hamiltonian(int nA, int lA, int qA, double offsetA[3], double posA[3], float Z, float ZB, double posB[3]) {
 /* This is the problem!!! */
 
 
@@ -196,7 +199,7 @@ double hamiltonian(int nA, int lA, int qA, double offsetA[3], double posA[3], in
 	return (double)totalenergy/* * (2.1673 * pow(10, -13))*/;
 }
 
-pair calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, int Za, int Zb, double bond_length, int siz) {
+pair calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, float Za, float Zb, double bond_length, int siz) {
 
 	double numerator = 0;
 	double denominator = 0;
@@ -205,20 +208,15 @@ pair calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, int Za, in
 	double AWav = 0;
 	double BWav = 0;
 	
-	double x = 0;
-	double y = 0; 
-	double z = 0;
 	double sA[3] = {bond_length, 0, 0};
 	double sB[3] = {0, 0, 0};
-	double step = 0.1;
-	double pos_x, pos_y, pos_z;
+
 	double pos[3];
-	int priv_nloops;
+
 	double priv_num, priv_den;
-	int thread_id;
+
 	//#pragma omp parallel private(priv_num, priv_den, pos) reduction(+:numerator,denominator)
 	//{
-		priv_nloops = 0;
 		priv_num = 0;
 		priv_den = 0;
 		double r, theta, phi;
@@ -252,7 +250,6 @@ pair calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, int Za, in
 	pair xl;
 	xl.a = numerator;
 	xl.b = denominator;
-	double energy = numerator/denominator;
 	//printf("%lf %lf\n", numerator, denominator);
 	return xl;
 	
@@ -285,9 +282,80 @@ int switched(float a, float b) {
 	return 0;
 }
 
+void calculate_coefficients(float matr[50], int len, float * arr) {
+	/*arr[0] = 3;
+	printf("======START======\n");
+	f
+	// Minimise sum of matr[n] subject to sum of arr[0...n] = 1
+	glp_prob *lp;
+	lp = glp_create_prob();
+	glp_set_prob_name(lp, "coefficients");
+	glp_set_obj_dir(lp, GLP_MIN);
+	glp_add_rows(lp, 1);
+	glp_set_row_name(lp, 1, "p");
+	glp_set_row_bnds(lp, 1, GLP_FX, 1,1);
+	glp_add_cols(lp, len);
+	int x;
+	double ar[50];
+	int xar[50];
+	int yar[50];
+	for (x = 0; x < len; x++) {
+		glp_set_col_bnds(lp, x+1, GLP_DB, 0, 1);
+		glp_set_obj_coef(lp, x+1, matr[x]);
+		ar[x] = 1;
+		xar[x] = x+1;
+		yar[x] = 1;
+	}
+	printf("%d\n", len);
+	glp_load_matrix(lp, len-1, yar, xar, ar);
+	glp_simplex(lp, NULL);
+	printf("%f\n", glp_get_obj_val(lp));
+	for (x = 0; x < len; x++) {
+		arr[x] = glp_get_col_prim(lp, x+1);
+	}
+	glp_delete_prob(lp);
+	printf("=========FINISH======\n");*/
+	
+	float trial_coefficients[50];
+	float current_lowest = 1000;
+	//float lowest_coefficients[50];
+	
+	int c, x;
+	float r = 0;
+	float cumulative = 0;
+	float current_sum = 0;
+
+	/* It's legit I swear */
+	/* You idiot, it's the sum of squares which = 1 */
+	for (c = 0; c < pow(100, len); c++) {
+		cumulative = 0;
+		current_sum = 0;
+		for (x = 0; x < len-1; x++) {
+			r = 1000 - (cumulative * 1000);
+			
+			trial_coefficients[x] = (((float)(rand()%(2*((int) r)))) / 1000)-1;
+			cumulative = cumulative + pow(trial_coefficients[x], 2);
+			current_sum += trial_coefficients[x] * matr[x];
+		}
+		trial_coefficients[len-1] = sqrt(1 - cumulative);
+		current_sum += trial_coefficients[len-1] * matr[len-1];
+		if (abs(current_sum) < current_lowest) {
+			current_lowest = abs(current_sum);
+			for (x = 0; x < len; x++) {
+				arr[x] = trial_coefficients[x];
+			}
+		}
+		
+	}
+	printf("Current Lowest: %f\n", current_lowest);
+	int i;
+	
+}
+
 int main(void) {
-	double ar[4] = {1, 2, 3, 4};
-	double rs[4] = {2, 0, 0, 1};
+	srand(time(NULL));
+	printf("%f\n", ((float)(rand()%1000))/1000);
+	//exit(0);
 	int n = 50;
 	typedef struct {
 		int orbitals[50][3];
@@ -305,15 +373,15 @@ int main(void) {
 	atoms[0].pos[0] = 0;
 	atoms[0].pos[1] = 0;
 	atoms[0].pos[2] = 0;
-	atoms[0].zeff = 0.7;
+	atoms[0].zeff = 1;
 	atoms[1].orbitals[0][0] = 1;
 	atoms[1].orbitals[0][1] = 0;
 	atoms[1].orbitals[0][2] = 0;
 	atoms[1].num_orbitals = 1;
-	atoms[1].pos[0] = 1;
+	atoms[1].pos[0] = 1.4;
 	atoms[1].pos[1] = 0;
 	atoms[1].pos[2] = 0;
-	atoms[1].zeff = 0.7;
+	atoms[1].zeff = 1;
 
 	
 	/* -1.5 for 1s, -0.375 for 2s, -0.167 for 3s */
@@ -321,38 +389,54 @@ int main(void) {
 	float Ss[50][50];
 	float Hs[50][50];
 	pair xs;
-	int x, y, dim = 3;
-	float bond_length = 2;
-	float energy_a[100];
-	float energy_b[100];
-	for (bond_length = 0.1; bond_length < 5; bond_length += 0.1) {
-	printf("%f ==============================\n", bond_length);
-	for (x = 0; x < dim; x++) {
-		for (y = x; y < dim; y++) {
+	int x, y, dim = num_atoms, x_orb, y_orb;
+	float bond_length = 0.5;
+
+	float distance;
+	int a = 0,b = 0;
+	for (x = 0; x < num_atoms; x++) {
+		for (x_orb = 0; x_orb < atoms[x].num_orbitals; x_orb++) {
+			for (y = 0; y < num_atoms; y++) {
+				for (y_orb = 0; y_orb < atoms[y].num_orbitals; y_orb++) {
+					printf("%d.%d :: %d, %d.%d :: %d \n", x, x_orb,a, y, y_orb, b);
 			/// pair calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, int Za, int Zb, double bond_length, int siz) {
-			xs = calculate_energy(orbitals[x][0], orbitals[x][1], orbitals[x][2], orbitals[y][0], orbitals[y][1], orbitals[y][2], 1, 1, abs(x - y) * bond_length, n);
-			Ss[x][y] = xs.b;
-			Hs[x][y] = xs.a;
-			Ss[y][x] = xs.b;
-			Hs[y][x] = xs.a;
-			
+					distance = sqrt(pow(atoms[x].pos[0] - atoms[y].pos[0], 2) + pow(atoms[x].pos[1] - atoms[y].pos[1], 2) + pow(atoms[x].pos[2] - atoms[y].pos[2], 2));
+					printf("DISTANCE %f\n", distance);
+					printf("%d%d%d %f // %d%d%d %f :: %f\n", atoms[x].orbitals[x_orb][0], atoms[x].orbitals[x_orb][1], atoms[x].orbitals[x_orb][2],atoms[x].zeff, atoms[y].orbitals[y_orb][0], atoms[y].orbitals[y_orb][1], atoms[y].orbitals[y_orb][2], atoms[y].zeff, distance * bond_length);
+					xs = calculate_energy(atoms[x].orbitals[x_orb][0], atoms[x].orbitals[x_orb][1], atoms[x].orbitals[x_orb][2], atoms[y].orbitals[y_orb][0], atoms[y].orbitals[y_orb][1], atoms[y].orbitals[y_orb][2], atoms[x].zeff, atoms[y].zeff, distance * bond_length, n);
+					Ss[a][b] = xs.b;
+					if (distance > 0)
+						Hs[a][b] = (xs.a/3) + ((atoms[x].zeff * atoms[y].zeff) / (distance * bond_length));
+					else
+						Hs[a][b] = (xs.a/3);
+					printf("Ss[%d][%d] = %f;; Hs[%d][%d] = %f\n", a, b, Ss[a][b], a, b, Hs[a][b]);
+					b++;
+				}
+			}
+			a++;	
+			b = 0;		
 		}
 	}
-	
+
 	printf("H\n");
-	for (x = 0; x < dim; x++) {
-		for (y = 0; y < dim; y++) {
-			printf("%0.4f\t", Hs[x][y]);
+	for (x = 0; x < a; x++) {
+		for (y = 0; y < a; y++) {
+			printf("%0.4f\t", Hs[x][y]/1000);
 		}
 		printf("\n");
 	}
 	printf("S\n");
-	for (x = 0; x < dim; x++) {
-		for (y = 0; y < dim; y++) {
-			printf("%0.4f\t", Ss[x][y]);
+	for (x = 0; x < a; x++) {
+		for (y = 0; y < a; y++) {
+			printf("%0.4f\t", Ss[x][y]/1000);
 		}
 		printf("\n");
 	}
+	
+	/*if (a != b) {
+		printf("ded\n");
+		exit(0);
+	}*/
 	
 	float E;
 	float prev;
@@ -361,8 +445,8 @@ int main(void) {
 	float switching_points[50];
 	int curr_s = 0;
 	for (E = -6; E <= 0; E+=0.001) {
-		for (x = 0; x < dim; x++) {
-			for (y = 0; y < dim; y++) {
+		for (x = 0; x < a; x++) {
+			for (y = 0; y < a; y++) {
 				m[x][y] = Hs[x][y] - E * Ss[x][y];
 			}
 		}	
@@ -373,18 +457,35 @@ int main(void) {
 				printf("%f ===================\n", E);
 				switching_points[curr_s] = E;
 				curr_s++;
+				
+				
 			}
 		}
 		//printf("%f, %f\n", E, curr);
 	}
+	float coeff[50];
+	float red[50];
 	for (x = 0; x < curr_s; x ++) {
-		printf("%f\n", switching_points[x]);
+		printf("%f - [", switching_points[x]);
+		/* Now calculate the coefficients */
+		for (y = 0; y < a; y++) {
+			if (y == 0)
+				red[y] = Hs[0][y] - switching_points[x] * Ss[0][y];
+			else
+				red[y] = Hs[0][y];
+			printf("%f %f\n", Hs[0][y], Ss[0][y]);
+			printf("Red[%d] %f\n", y, red[y]);
+		}
+		calculate_coefficients(red, a, coeff);
+		printf("[");
+		for (y = 0; y < a; y++) {
+			printf("%f", coeff[y]);
+			if (y != a-1)
+				printf("\t");
+		}
+		printf("]\n");
+		
 	}
-	energy_a[(int)(bond_length * 10)] = switching_points[0];
-	energy_b[(int)(bond_length * 10)] = switching_points[1];
-	}
-	for (bond_length = 0.1; bond_length < 5; bond_length += 0.1) {
-		printf("%f, %f, %f\n", bond_length, energy_a[(int)(bond_length * 10)], energy_b[(int)(bond_length * 10)]);
-	}
+
 	return 1;
 }
