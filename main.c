@@ -347,22 +347,17 @@ void calculate_coefficients(float matr[50], int len, float * arr) {
 		}
 		
 	}
-	printf("Current Lowest: %f\n", current_lowest);
+	//printf("Current Lowest: %f\n", current_lowest);
 	int i;
 	
 }
 
 int main(void) {
-	srand(time(NULL));
-	printf("%f\n", ((float)(rand()%1000))/1000);
+	//srand(time(NULL));
+	//printf("%f\n", ((float)(rand()%1000))/1000);
 	//exit(0);
 	int n = 50;
-	typedef struct {
-		int orbitals[50][3];
-		int num_orbitals;
-		float pos[3];
-		float zeff;
-	} atom;
+
 	
 	atom atoms[5];
 	int num_atoms = 2;
@@ -398,18 +393,17 @@ int main(void) {
 		for (x_orb = 0; x_orb < atoms[x].num_orbitals; x_orb++) {
 			for (y = 0; y < num_atoms; y++) {
 				for (y_orb = 0; y_orb < atoms[y].num_orbitals; y_orb++) {
-					printf("%d.%d :: %d, %d.%d :: %d \n", x, x_orb,a, y, y_orb, b);
 			/// pair calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, int Za, int Zb, double bond_length, int siz) {
 					distance = sqrt(pow(atoms[x].pos[0] - atoms[y].pos[0], 2) + pow(atoms[x].pos[1] - atoms[y].pos[1], 2) + pow(atoms[x].pos[2] - atoms[y].pos[2], 2));
-					printf("DISTANCE %f\n", distance);
-					printf("%d%d%d %f // %d%d%d %f :: %f\n", atoms[x].orbitals[x_orb][0], atoms[x].orbitals[x_orb][1], atoms[x].orbitals[x_orb][2],atoms[x].zeff, atoms[y].orbitals[y_orb][0], atoms[y].orbitals[y_orb][1], atoms[y].orbitals[y_orb][2], atoms[y].zeff, distance * bond_length);
+					//printf("DISTANCE %f\n", distance);
+					//printf("%d%d%d %f // %d%d%d %f :: %f\n", atoms[x].orbitals[x_orb][0], atoms[x].orbitals[x_orb][1], atoms[x].orbitals[x_orb][2],atoms[x].zeff, atoms[y].orbitals[y_orb][0], atoms[y].orbitals[y_orb][1], atoms[y].orbitals[y_orb][2], atoms[y].zeff, distance * bond_length);
 					xs = calculate_energy(atoms[x].orbitals[x_orb][0], atoms[x].orbitals[x_orb][1], atoms[x].orbitals[x_orb][2], atoms[y].orbitals[y_orb][0], atoms[y].orbitals[y_orb][1], atoms[y].orbitals[y_orb][2], atoms[x].zeff, atoms[y].zeff, distance * bond_length, n);
 					Ss[a][b] = xs.b;
 					if (distance > 0)
 						Hs[a][b] = (xs.a/3) + ((atoms[x].zeff * atoms[y].zeff) / (distance * bond_length));
 					else
 						Hs[a][b] = (xs.a/3);
-					printf("Ss[%d][%d] = %f;; Hs[%d][%d] = %f\n", a, b, Ss[a][b], a, b, Hs[a][b]);
+					//printf("Ss[%d][%d] = %f;; Hs[%d][%d] = %f\n", a, b, Ss[a][b], a, b, Hs[a][b]);
 					b++;
 				}
 			}
@@ -454,7 +448,7 @@ int main(void) {
 		curr = det(m, dim);
 		if (E != 0) {
 			if (switched(prev, curr) == 1) {
-				printf("%f ===================\n", E);
+				//printf("%f ===================\n", E);
 				switching_points[curr_s] = E;
 				curr_s++;
 				
@@ -470,14 +464,14 @@ int main(void) {
 		/* Now calculate the coefficients */
 		for (y = 0; y < a; y++) {
 			if (y == 0)
-				red[y] = Hs[0][y] - switching_points[x] * Ss[0][y];
+				red[y] = Hs[0][y] - (switching_points[x]) * Ss[0][y];
 			else
 				red[y] = Hs[0][y];
-			printf("%f %f\n", Hs[0][y], Ss[0][y]);
-			printf("Red[%d] %f\n", y, red[y]);
+			//printf("%f %f\n", Hs[0][y], Ss[0][y]);
+			//printf("Red[%d] %f\n", y, red[y]);
 		}
 		calculate_coefficients(red, a, coeff);
-		printf("[");
+	//	printf("[");
 		for (y = 0; y < a; y++) {
 			printf("%f", coeff[y]);
 			if (y != a-1)
