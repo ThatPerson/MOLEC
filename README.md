@@ -2,12 +2,12 @@ A very basic Molecular Orbital calculator. Kind of utilises the Hartree-Fock app
 
 Works by defining two matrices, H and S. 
 
-H[x][y] =  integrate wavefunction[x] * hamiltonian(wavefunction[y]) over all space
-S[x][y] =  integrate wavefunction[x] * wavefunction[y] over all space
+    H[x][y] =  integrate wavefunction[x] * hamiltonian(wavefunction[y]) over all space
+    S[x][y] =  integrate wavefunction[x] * wavefunction[y] over all space
 
 Then we form a set of relationships;
 
-det(H-ES) = 0
+    det(H-ES) = 0
 
 This is then solved to give a number of solutions for the energy, E. These E values are then used to calculate the orbital coefficients (which are often imprecise).
 
