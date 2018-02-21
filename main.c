@@ -463,10 +463,10 @@ int main(void) {
 		printf("%f - [", switching_points[x]);
 		/* Now calculate the coefficients */
 		for (y = 0; y < a; y++) {
-			if (y == 0)
+			//if (y == 0)
 				red[y] = Hs[0][y] - (switching_points[x]) * Ss[0][y];
-			else
-				red[y] = Hs[0][y];
+			//else
+		//		red[y] = Hs[0][y];
 			//printf("%f %f\n", Hs[0][y], Ss[0][y]);
 			//printf("Red[%d] %f\n", y, red[y]);
 		}
