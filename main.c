@@ -23,9 +23,13 @@ typedef struct {
 } pair;
 
 typedef struct {
+	double x, y, z;
+} position;
+
+typedef struct {
 	int orbitals[50][3];
 	int num_orbitals;
-	float pos[3];
+	position pos;
 	float zeff;
 } atom;
 
@@ -72,11 +76,11 @@ float det(float m[50][50], int dimensions) {
 
 
 
-double wavefunction(int n, int l, int q, double pos[3], double offset[3], float Z) {
+double wavefunction(int n, int l, int q, position read_pos, position pos, float Z) {
 	// args is [n, l, m, Z]
-	double x = pos[0] - offset[0];
-	double y = pos[1] - offset[1];
-	double z = pos[2] - offset[2];
+	double x = pos.x - read_pos.x;
+	double y = pos.y - read_pos.y;
+	double z = pos.z - read_pos.z;
 	//printf("%lf %lf %lf\n", x, y, z);
 	double r = sqrt(pow(x, 2) + pow(y, 2) + pow(z, 2));
 	if (n == 1) {
@@ -120,13 +124,22 @@ double wavefunction(int n, int l, int q, double pos[3], double offset[3], float 
 			}
 		}
 	} else {
+		printf("%d %d %d\n", n, l, q);
 		printf("I don't recognise that orbital..\n");
 		exit(1);
 	}
 	return -1;
 }
 
-double hamiltonian(int nA, int lA, int qA, double offsetA[3], double posA[3], float Z, float ZB, double posB[3]) {
+position arr_pos(double x, double y, double z) {
+	position ls;
+	ls.x = x;
+	ls.y = y;
+	ls.z = z;
+	return ls;
+}
+
+double hamiltonian(int nA, int lA, int qA, int nB, int lB, int qB, position posA, position read_pos, float Z, float ZB, position posB) {
 /* This is the problem!!! */
 
 
@@ -137,29 +150,27 @@ double hamiltonian(int nA, int lA, int qA, double offsetA[3], double posA[3], fl
 	//posA[0] = posA[0]/10;
 	//posA[1] = posA[1]/10;
 	//posA[2] = posA[2]/10;
-	double r = sqrt(pow(posA[0], 2) + pow(posA[1], 2) + pow(posA[2], 2));
-	double rB = sqrt(pow(posB[0] - posA[0], 2) + pow(posB[1] - posA[1], 2) + pow(posB[2] - posA[2], 2));
-	if (r == 0) {
-		// We are at the center, and so the potential will make it fail.
-		return NAN;
-	}
-	if (rB == 0) {
-		rB = 0.001;
-	}
-	double dxsquu[4] = {posA[0] + alpha + beta, posA[1], posA[2]};
-	double dxsqud[4] = {posA[0] + alpha - beta, posA[1], posA[2]};
-	double dxsqdu[4] = {posA[0] - alpha + beta, posA[1], posA[2]};
-	double dxsqdd[4] = {posA[0] - alpha - beta, posA[1], posA[2]};
+	double r = sqrt(pow(posA.x, 2) + pow(posA.y, 2) + pow(posA.z, 2));
+	double rB = sqrt(pow(posB.x - posA.x, 2) + pow(posB.y - posA.y, 2) + pow(posB.z - posA.z, 2));
 	
-	double dysquu[4] = {posA[0], posA[1] + alpha + beta, posA[2]};
-	double dysqud[4] = {posA[0], posA[1] + alpha - beta, posA[2]};
-	double dysqdu[4] = {posA[0], posA[1] - alpha + beta, posA[2]};
-	double dysqdd[4] = {posA[0], posA[1] - alpha - beta, posA[2]};
+	double distRA = sqrt(pow(posA.x - read_pos.x, 2) + pow(posA.y - read_pos.y, 2) + pow(posA.z - read_pos.z, 2));
+	double distRB = sqrt(pow(posB.x - read_pos.x, 2) + pow(posB.y - read_pos.y, 2) + pow(posB.z - read_pos.z, 2));
 	
-	double dzsquu[4] = {posA[0], posA[1], posA[2] + alpha + beta};
-	double dzsqud[4] = {posA[0], posA[1], posA[2] + alpha - beta};
-	double dzsqdu[4] = {posA[0], posA[1], posA[2] - alpha + beta};
-	double dzsqdd[4] = {posA[0], posA[1], posA[2] - alpha - beta};
+	
+	position dxsquu = arr_pos(posA.x + alpha + beta, posA.y, posA.z);
+	position dxsqud = arr_pos(posA.x + alpha - beta, posA.y, posA.z);
+	position dxsqdu = arr_pos(posA.x - alpha + beta, posA.y, posA.z);
+	position dxsqdd = arr_pos(posA.x - alpha - beta, posA.y, posA.z);
+	
+	position dysquu = arr_pos(posA.x, posA.y + alpha + beta, posA.z);
+	position dysqud = arr_pos(posA.x, posA.y + alpha - beta, posA.z);
+	position dysqdu = arr_pos(posA.x, posA.y - alpha + beta, posA.z);
+	position dysqdd = arr_pos(posA.x, posA.y - alpha - beta, posA.z);
+	
+	position dzsquu = arr_pos(posA.x, posA.y, posA.z + alpha + beta);
+	position dzsqud = arr_pos(posA.x, posA.y, posA.z + alpha - beta);
+	position dzsqdu = arr_pos(posA.x, posA.y, posA.z - alpha + beta);
+	position dzsqdd = arr_pos(posA.x, posA.y, posA.z - alpha - beta);
 	
 	//		dxsquu[0], dxsquu[1], dxsquu[2], dxsquu[3], 
 	//		dxsqud[0], dxsqud[1], dxsqud[2], dxsqud[3], 
@@ -175,9 +186,9 @@ double hamiltonian(int nA, int lA, int qA, double offsetA[3], double posA[3], fl
 	/* Work out how to map this onto the actual values.!!!!!!!!!!!!!! */
 	
 	
-	double dxsq = (((wavefunction(nA, lA, qA, dxsquu, offsetA, Z) - wavefunction(nA, lA, qA, dxsqud, offsetA, Z)) / (2*beta)) - ((wavefunction(nA, lA, qA, dxsqdu, offsetA, Z) - wavefunction(nA, lA, qA, dxsqdd, offsetA, Z)) / (2*beta))) / (2*alpha);
-	double dysq = (((wavefunction(nA, lA, qA, dysquu, offsetA, Z) - wavefunction(nA, lA, qA, dysqud, offsetA, Z)) / (2*beta)) - ((wavefunction(nA, lA, qA, dysqdu, offsetA, Z) - wavefunction(nA, lA, qA, dysqdd, offsetA, Z)) / (2*beta))) / (2*alpha);
-	double dzsq = (((wavefunction(nA, lA, qA, dzsquu, offsetA, Z) - wavefunction(nA, lA, qA, dzsqud, offsetA, Z)) / (2*beta)) - ((wavefunction(nA, lA, qA, dzsqdu, offsetA, Z) - wavefunction(nA, lA, qA, dzsqdd, offsetA, Z)) / (2*beta))) / (2*alpha);
+	double dxsq = (((wavefunction(nA, lA, qA, read_pos, dxsquu, Z) - wavefunction(nA, lA, qA, read_pos, dxsqud, Z)) / (2*beta)) - ((wavefunction(nA, lA, qA, read_pos, dxsqdu, Z) - wavefunction(nA, lA, qA, read_pos, dxsqdd, Z)) / (2*beta))) / (2*alpha);
+	double dysq = (((wavefunction(nA, lA, qA, read_pos, dysquu, Z) - wavefunction(nA, lA, qA, read_pos, dysqud, Z)) / (2*beta)) - ((wavefunction(nA, lA, qA, read_pos, dysqdu, Z) - wavefunction(nA, lA, qA, read_pos, dysqdd, Z)) / (2*beta))) / (2*alpha);
+	double dzsq = (((wavefunction(nA, lA, qA, read_pos, dzsquu, Z) - wavefunction(nA, lA, qA, read_pos, dzsqud, Z)) / (2*beta)) - ((wavefunction(nA, lA, qA, read_pos, dzsqdu, Z) - wavefunction(nA, lA, qA, read_pos, dzsqdd, Z)) / (2*beta))) / (2*alpha);
 	
 	//printf("%lf %lf %lf :SQUARES: %lf %lf %lf\n", posA[0], posA[1], posA[2], dxsq, dysq, dzsq);
 	
@@ -185,12 +196,17 @@ double hamiltonian(int nA, int lA, int qA, double offsetA[3], double posA[3], fl
 	double b = 1;
 	
 	//double a = 1;
+    double otheratom = 0;
+    double potentialenergy = 0;
 	//double b = 1;
 	double kineticenergy = - a * (dxsq + dysq + dzsq);
-	double potentialenergy = - b * wavefunction(nA, lA, qA, posA, offsetA, Z) * Z / r;
-	double otheratom = - b * wavefunction(nA, lA, qA, posA, offsetA, Z) * ZB / rB;
+    if (distRA != 0)
+        potentialenergy = - b * wavefunction(nA, lA, qA, read_pos, posA, Z) * Z / distRA;
+    if (rB != 0 && distRB != 0) // Don't count the same atom twice.
+        otheratom = - b * wavefunction(nB, lB, qB, read_pos, posB, ZB) * ZB / distRB;
+
 	//printf("%f %f %f\n", kineticenergy, potentialenergy, otheratom);
-	double totalenergy = kineticenergy + (potentialenergy + otheratom);
+	double totalenergy = kineticenergy + (potentialenergy+ otheratom);
 	
 	
 	
@@ -199,7 +215,7 @@ double hamiltonian(int nA, int lA, int qA, double offsetA[3], double posA[3], fl
 	return (double)totalenergy/* * (2.1673 * pow(10, -13))*/;
 }
 
-pair calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, float Za, float Zb, double bond_length, int siz) {
+pair calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, float Za, float Zb, position sA, position sB, int siz) {
 
 	double numerator = 0;
 	double denominator = 0;
@@ -207,52 +223,48 @@ pair calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, float Za, 
 	double hammy = 0;
 	double AWav = 0;
 	double BWav = 0;
-	
-	double sA[3] = {bond_length, 0, 0};
-	double sB[3] = {0, 0, 0};
 
-	double pos[3];
+	position pos;
 
 	double priv_num, priv_den;
 
-	//#pragma omp parallel private(priv_num, priv_den, pos) reduction(+:numerator,denominator)
-	//{
-		priv_num = 0;
-		priv_den = 0;
-		double r, theta, phi;
-		//#pragma omp for
-		for (r = 0.01; r <= 40; r+=0.1) {
-			for (theta = 0.01; theta <= PI; theta+=0.1) {
-				for (phi = 0.01; phi <= 2 * PI; phi+=0.1) {
-					pos[0] = r * cos(phi) * sin(theta);
-					pos[1] = r * sin(phi) * sin(theta);
-					pos[2] = r * cos(theta);
-					
-			//		double hamiltonian(int nA, int lA, int qA, double offsetA[3], double posA[3], int Z, int ZB, double posB[3]) {
-			//		double wavefunction(int n, int l, int q, double pos[3], double offset[3], int Z) {
-					
-					hammy = hamiltonian(nA, lA, qA, sA, pos, Za, Zb, sB);
-					AWav = wavefunction(nA, lA, qA, pos, sA, Za);
-					BWav = wavefunction(nB, lB, qB, pos, sB, Zb);
-					if (!isnan(hammy) && !isnan(AWav) && !isnan(BWav)) {
-						priv_num += hammy * BWav * pow(r, 2) * sin(theta);
-						priv_den += AWav * BWav * pow(r, 2) * sin(theta); 
-					} else {
-						printf("It's non existent?\n");
-					}
-				}
-			}
-		}
-		numerator += priv_num;
-		denominator += priv_den;
-	//}
-	printf("%lf %lf\n", numerator, denominator);
+	priv_num = 0;
+	priv_den = 0;
+	double r, theta, phi;
+	
 	pair xl;
 	xl.a = numerator;
 	xl.b = denominator;
+    
+    /*pair calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, float Za, float Zb, position sA, position sB, int siz) {*/
+    position read = arr_pos((sA.x + sB.x) / 2, (sA.y + sB.y) / 2, (sA.z + sB.z) / 2);
+    read = arr_pos(1, 0, 0);
+    float ham = hamiltonian(nA, lA, qA, nB, lB, qB, sA, read, Za, Zb, sB);
+    float wav = wavefunction(nA, lA, qA, read, sA, Za);
+    xl.a = ham / wav; // Eigenfunction eigenvalue pair.
+    
+    position A = arr_pos(0, 0, 0);
+    position B = arr_pos(2, 0, 0);
+    position reads = arr_pos(3, 0, 0);
+
+    float x, y, z, volume_element, step = 0.5, total_sum_oi = 0, oi, total_sum_ham = 0;
+    for (x = -10; x <= 10; x+=step) {
+        for (y = -10; y <= 10; y += step) {
+            for (z = -10; z <= 10; z+=step) {
+                volume_element = pow(step, 3);
+                oi = wavefunction(nA, lA, qA, arr_pos(x, y, z), sA, Za) * wavefunction(nB, lB, qB, arr_pos(x, y, z), sB, Zb) * volume_element;
+                total_sum_oi += oi;
+                ham = hamiltonian(nA, lA, qA, nB, lB, qB, sA, arr_pos(x, y, z), Za, Zb, sB) / wavefunction(nA, lA, qA, arr_pos(x, y, z), sA, Za);
+                total_sum_ham += volume_element * ham / pow(20, 3);
+            }
+        }
+    }
+    xl.b = total_sum_oi;
+    xl.a = total_sum_ham;
+    printf("%f %f\n", total_sum_oi, total_sum_ham);
+    
 	//printf("%lf %lf\n", numerator, denominator);
 	return xl;
-	
 }
 
 
@@ -282,40 +294,7 @@ int switched(float a, float b) {
 	return 0;
 }
 
-void calculate_coefficients(float matr[50], int len, float * arr) {
-	/*arr[0] = 3;
-	printf("======START======\n");
-	f
-	// Minimise sum of matr[n] subject to sum of arr[0...n] = 1
-	glp_prob *lp;
-	lp = glp_create_prob();
-	glp_set_prob_name(lp, "coefficients");
-	glp_set_obj_dir(lp, GLP_MIN);
-	glp_add_rows(lp, 1);
-	glp_set_row_name(lp, 1, "p");
-	glp_set_row_bnds(lp, 1, GLP_FX, 1,1);
-	glp_add_cols(lp, len);
-	int x;
-	double ar[50];
-	int xar[50];
-	int yar[50];
-	for (x = 0; x < len; x++) {
-		glp_set_col_bnds(lp, x+1, GLP_DB, 0, 1);
-		glp_set_obj_coef(lp, x+1, matr[x]);
-		ar[x] = 1;
-		xar[x] = x+1;
-		yar[x] = 1;
-	}
-	printf("%d\n", len);
-	glp_load_matrix(lp, len-1, yar, xar, ar);
-	glp_simplex(lp, NULL);
-	printf("%f\n", glp_get_obj_val(lp));
-	for (x = 0; x < len; x++) {
-		arr[x] = glp_get_col_prim(lp, x+1);
-	}
-	glp_delete_prob(lp);
-	printf("=========FINISH======\n");*/
-	
+void calculate_coefficients(float matr[50], int len, float * arr) {	
 	float trial_coefficients[50];
 	float current_lowest = 1000;
 	//float lowest_coefficients[50];
@@ -365,121 +344,136 @@ int main(void) {
 	atoms[0].orbitals[0][1] = 0;
 	atoms[0].orbitals[0][2] = 0;
 	atoms[0].num_orbitals = 1;
-	atoms[0].pos[0] = 0;
-	atoms[0].pos[1] = 0;
-	atoms[0].pos[2] = 0;
+	atoms[0].pos.x = 0;
+	atoms[0].pos.y = 0;
+	atoms[0].pos.z = 0;
 	atoms[0].zeff = 1;
 	atoms[1].orbitals[0][0] = 1;
 	atoms[1].orbitals[0][1] = 0;
 	atoms[1].orbitals[0][2] = 0;
 	atoms[1].num_orbitals = 1;
-	atoms[1].pos[0] = 1.4;
-	atoms[1].pos[1] = 0;
-	atoms[1].pos[2] = 0;
+	//atoms[1].pos[0] = 1.4;
+	atoms[1].pos.x = 3;
+	atoms[1].pos.y = 0;
+	atoms[1].pos.z = 0;
 	atoms[1].zeff = 1;
-
 	
-	/* -1.5 for 1s, -0.375 for 2s, -0.167 for 3s */
-	
-	float Ss[50][50];
-	float Hs[50][50];
-	pair xs;
-	int x, y, dim = num_atoms, x_orb, y_orb;
-	float bond_length = 0.5;
 
-	float distance;
-	int a = 0,b = 0;
-	for (x = 0; x < num_atoms; x++) {
-		for (x_orb = 0; x_orb < atoms[x].num_orbitals; x_orb++) {
-			for (y = 0; y < num_atoms; y++) {
-				for (y_orb = 0; y_orb < atoms[y].num_orbitals; y_orb++) {
-			/// pair calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, int Za, int Zb, double bond_length, int siz) {
-					distance = sqrt(pow(atoms[x].pos[0] - atoms[y].pos[0], 2) + pow(atoms[x].pos[1] - atoms[y].pos[1], 2) + pow(atoms[x].pos[2] - atoms[y].pos[2], 2));
-					//printf("DISTANCE %f\n", distance);
-					//printf("%d%d%d %f // %d%d%d %f :: %f\n", atoms[x].orbitals[x_orb][0], atoms[x].orbitals[x_orb][1], atoms[x].orbitals[x_orb][2],atoms[x].zeff, atoms[y].orbitals[y_orb][0], atoms[y].orbitals[y_orb][1], atoms[y].orbitals[y_orb][2], atoms[y].zeff, distance * bond_length);
-					xs = calculate_energy(atoms[x].orbitals[x_orb][0], atoms[x].orbitals[x_orb][1], atoms[x].orbitals[x_orb][2], atoms[y].orbitals[y_orb][0], atoms[y].orbitals[y_orb][1], atoms[y].orbitals[y_orb][2], atoms[x].zeff, atoms[y].zeff, distance * bond_length, n);
-					Ss[a][b] = xs.b;
-					if (distance > 0)
-						Hs[a][b] = (xs.a/3) + ((atoms[x].zeff * atoms[y].zeff) / (distance * bond_length));
-					else
-						Hs[a][b] = (xs.a/3);
-					//printf("Ss[%d][%d] = %f;; Hs[%d][%d] = %f\n", a, b, Ss[a][b], a, b, Hs[a][b]);
-					b++;
-				}
-			}
-			a++;	
-			b = 0;		
-		}
-	}
 
-	printf("H\n");
-	for (x = 0; x < a; x++) {
-		for (y = 0; y < a; y++) {
-			printf("%0.4f\t", Hs[x][y]/1000);
-		}
-		printf("\n");
-	}
-	printf("S\n");
-	for (x = 0; x < a; x++) {
-		for (y = 0; y < a; y++) {
-			printf("%0.4f\t", Ss[x][y]/1000);
-		}
-		printf("\n");
-	}
-	
-	/*if (a != b) {
-		printf("ded\n");
-		exit(0);
-	}*/
-	
-	float E;
-	float prev;
-	float curr;
-	float m[50][50];
-	float switching_points[50];
-	int curr_s = 0;
-	for (E = -6; E <= 0; E+=0.001) {
-		for (x = 0; x < a; x++) {
-			for (y = 0; y < a; y++) {
-				m[x][y] = Hs[x][y] - E * Ss[x][y];
-			}
-		}	
-		prev = curr;
-		curr = det(m, dim);
-		if (E != 0) {
-			if (switched(prev, curr) == 1) {
-				//printf("%f ===================\n", E);
-				switching_points[curr_s] = E;
-				curr_s++;
-				
-				
-			}
-		}
-		//printf("%f, %f\n", E, curr);
-	}
-	float coeff[50];
-	float red[50];
-	for (x = 0; x < curr_s; x ++) {
-		printf("%f - [", switching_points[x]);
-		/* Now calculate the coefficients */
-		for (y = 0; y < a; y++) {
-			//if (y == 0)
-				red[y] = Hs[0][y] - (switching_points[x]) * Ss[0][y];
-			//else
-		//		red[y] = Hs[0][y];
-			//printf("%f %f\n", Hs[0][y], Ss[0][y]);
-			//printf("Red[%d] %f\n", y, red[y]);
-		}
-		calculate_coefficients(red, a, coeff);
-	//	printf("[");
-		for (y = 0; y < a; y++) {
-			printf("%f", coeff[y]);
-			if (y != a-1)
-				printf("\t");
-		}
-		printf("]\n");
-		
-	}
+    
+ position A = arr_pos(0, 0, 0);
+    position B = arr_pos(0, 0, 0);
+    position read = arr_pos(5, 0, 0);
 
+	double bonding[100];
+	double antibonding[100];
+	double nonbonding[100];
+	double psd = 4;
+    int current = 0;
+    for (psd = 0.5; psd < 50; psd += 0.5) {
+
+        printf("LSLSLS %f\n", psd);
+        atoms[0].pos.x = 0;
+        atoms[1].pos.x = psd;
+	
+        float Ss[50][50];
+        float Hs[50][50];
+        pair xs;
+        int x, y, dim = num_atoms, x_orb, y_orb;
+        float bond_length = 0.5;
+
+        float distance = 0;
+        int a = 0,b = 0;
+        for (x = 0; x < num_atoms; x++) {
+            for (x_orb = 0; x_orb < atoms[x].num_orbitals; x_orb++) {
+                for (y = 0; y < num_atoms; y++) {
+                    
+                    for (y_orb = 0; y_orb < atoms[y].num_orbitals; y_orb++) {
+                        xs = calculate_energy(atoms[x].orbitals[x_orb][0], atoms[x].orbitals[x_orb][1], atoms[x].orbitals[x_orb][2], atoms[y].orbitals[y_orb][0], atoms[y].orbitals[y_orb][1], atoms[y].orbitals[y_orb][2], atoms[x].zeff, atoms[y].zeff, atoms[x].pos, atoms[y].pos, n);
+                        Ss[a][b] = xs.b;
+                        Hs[a][b] = (xs.a);
+                        Hs[b][a] = (xs.a);
+                        Ss[b][a] = (xs.b);
+
+                        b++;
+                    }
+                }
+                a++;	
+                b = 0;		
+            }
+        }
+
+        printf("H\n");
+        for (x = 0; x < a; x++) {
+            for (y = 0; y < a; y++) {
+                printf("%0.4f\t", Hs[x][y]);
+            }
+            printf("\n");
+        }
+        printf("S\n");
+        for (x = 0; x < a; x++) {
+            for (y = 0; y < a; y++) {
+                printf("%0.4f\t", Ss[x][y]);
+            }
+            printf("\n");
+        }
+
+        float E;
+        float prev;
+        float curr;
+        float m[50][50];
+        float switching_points[50];
+        int curr_s = 0;
+        for (E = -6; E <= 6; E+=0.001) {
+            for (x = 0; x < a; x++) {
+                for (y = 0; y < a; y++) {
+                    m[x][y] = Hs[x][y] - E * Ss[x][y];
+                }
+            }	
+            prev = curr;
+            curr = det(m, dim);
+            if (E != 0) {
+                if (switched(prev, curr) == 1) {
+                    //printf("%f ===================\n", E);
+                    switching_points[curr_s] = E;
+                    curr_s++;
+                    
+                    
+                }
+            }
+            //printf("%f, %f\n", E, curr);
+        }
+        float coeff[50];
+        float red[50];
+        for (x = 0; x < curr_s; x ++) {
+            
+            printf("%f - [", switching_points[x]);
+            /* Now calculate the coefficients */
+            for (y = 0; y < a; y++) {
+                //if (y == 0)
+                    red[y] = Hs[0][y] - (switching_points[x]) * Ss[0][y];
+                //else
+            //		red[y] = Hs[0][y];
+                //printf("%f %f\n", Hs[0][y], Ss[0][y]);
+                //printf("Red[%d] %f\n", y, red[y]);
+            }
+            calculate_coefficients(red, a, coeff);
+        //	printf("[");
+            for (y = 0; y < a; y++) {
+                printf("%f", coeff[y]);
+                if (y != a-1)
+                    printf("\t");
+            }
+            printf("]\n");
+            
+        }
+        bonding[current] = switching_points[0];
+        antibonding[current] = switching_points[1];
+        current++;
+    }
+    int i;
+	for (i = 0; i < current; i++) {
+		printf("%f, %f, %f\n", (0.5 * i) + 0.5, bonding[i], antibonding[i]);
+	}
 	return 1;
 }
