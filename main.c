@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <omp.h>
 #include <glpk.h>
-
+#include <time.h>
 
 #define Infinity 100
 #define PI 3.14159265358
@@ -324,7 +324,10 @@ void calculate_coefficients(float matr[50], int len, float * arr) {
 	float current_sum = 0;
 
 	/* This bit isn't working!!! */
-	for (c = 0; c < pow(100, len); c++) {
+    
+    /* calculate_coefficients(red, a, coeff); */
+    
+	/*for (c = 0; c < pow(10000, len); c++) {
 		cumulative = 0;
 		current_sum = 0;
 		for (x = 0; x < len-1; x++) {
@@ -343,7 +346,23 @@ void calculate_coefficients(float matr[50], int len, float * arr) {
 			}
 		}
 		
-	}
+	}*/
+    current_lowest = 10000;
+    for (trial_coefficients[0] = -1; trial_coefficients[0] < 1; trial_coefficients[0] += 0.001) {
+        // this is c0
+        trial_coefficients[1] = sqrt(1-pow(trial_coefficients[0], 2));
+        current_sum = (trial_coefficients[0] * matr[0]) + (trial_coefficients[1] * matr[1]);
+        //printf("%f, %f, %f\n", trial_coefficients[0], trial_coefficients[1], current_sum);
+        
+        if (fabs(current_sum) < current_lowest) {
+            current_lowest = fabs(current_sum);
+            for (x = 0; x < len; x++) {
+                arr[x] = trial_coefficients[x];
+            }
+        }
+    }
+	
+	
 	//printf("Current Lowest: %f\n", current_lowest);
 	int i;
 	
@@ -471,7 +490,7 @@ int read_settings(atom *atoms, char * filename) {
 }
 
 int main(int argc, char*argv[]) {
-	//srand(time(NULL));
+	srand(time(NULL));
 	//printf("%f\n", ((float)(rand()%1000))/1000);
 	//exit(0);
 	int n = 50;
