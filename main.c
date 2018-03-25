@@ -31,6 +31,7 @@ typedef struct {
 	int num_orbitals;
 	position pos;
 	float zeff;
+    char symbol;
 } atom;
 
 typedef double (*Equation)(double*, double);
@@ -347,7 +348,128 @@ void calculate_coefficients(float matr[50], int len, float * arr) {
 	
 }
 
-int main(void) {
+int read_settings(atom *atoms, char * filename) {
+
+	atoms[0].pos.x = 0;
+	atoms[0].pos.y = 0;
+	atoms[0].pos.z = 0;
+
+	//atoms[1].pos[0] = 1.4;
+	atoms[1].pos.x = 7;
+	atoms[1].pos.y = 0;
+	atoms[1].pos.z = 0;
+    
+    
+
+    FILE* fp;
+    char buffer[255];
+
+    fp = fopen(filename, "r");
+    int mode;
+    int orbital;
+    int current_atom = 0;
+    int buff = 0;
+    int cu = 0;
+    char tmp_str[50];
+    float position[3];
+    int curr_p = 0;
+    while(fgets(buffer, 255, (FILE*) fp)) {
+        int i;
+        mode = 0;
+        orbital = 0;
+        cu = 0;
+        strcpy(tmp_str, "");
+        buff = 0;
+        curr_p = 0;
+        for (i = 0; i < 255; i++) {
+            if (buffer[i] == 0 || buffer[i] == 10) 
+                break;
+            switch (mode) {
+                case 0: mode++; atoms[current_atom].symbol = buffer[i]; break;
+                case 1: if (buffer[i] == 91) mode++; break;
+                case 2: 
+                    if (buffer[i] == 93) {
+                        mode++; 
+                        tmp_str[buff] = '\0';
+                        atoms[current_atom].zeff = atof(tmp_str);
+                    } else if (buffer[i] >= '0' && buffer[i] <= '9') {
+                        tmp_str[buff] = buffer[i];
+                        buff++;
+                    }
+                    break;
+                case 3: 
+                    if (buffer[i] == 40) {
+                        mode++; 
+                        atoms[current_atom].num_orbitals = 0;
+                        cu = 0;
+                    } 
+                    break;
+                case 4: 
+                    if (buffer[i] == 44) {
+                        atoms[current_atom].num_orbitals++;
+                        cu=0;
+                    } 
+                    if (buffer[i] >= '0' && buffer[i] <= '9') {
+                        atoms[current_atom].orbitals[atoms[current_atom].num_orbitals][cu] = buffer[i] - '0';
+                        cu++;
+                    }
+                    if (buffer[i] == 41) { 
+                        mode++; 
+                        atoms[current_atom].num_orbitals++; 
+                    }
+                    break;
+                case 5:
+                    if (buffer[i] == 123) {
+                        curr_p = 0;
+                        mode++;
+                        strcpy(tmp_str, "");
+                        buff = 0;
+                    }
+                    break;
+                case 6:
+                    if (buffer[i] == 44) {
+                        tmp_str[buff] = '\0';
+                        position[curr_p] = atof(tmp_str);
+                        strcpy(tmp_str, "");
+                        buff = 0;
+                        curr_p++;
+                        if (curr_p > 2) {
+                            printf("Out of bounds.\n");
+                            break;
+                        }
+                    
+                    } else if (buffer[i] >= '0' && buffer[i] <= '9') {
+                        tmp_str[buff] = buffer[i];
+                        buff++;
+                    } else if (buffer[i] == 125) {
+                        atoms[current_atom].pos = arr_pos(position[0], position[1], position[2]);
+                        mode++;
+                    }
+                    break;
+                    
+                    
+                    
+                    
+                    
+            } 
+        }
+        printf("THIS ATOM;;; \n%c -- %f   %d\n", atoms[current_atom].symbol, atoms[current_atom].zeff, atoms[current_atom].num_orbitals);
+
+        for (i = 0; i < atoms[current_atom].num_orbitals; i++) {
+            printf("\t%d %d %d\n", atoms[current_atom].orbitals[i][0], atoms[current_atom].orbitals[i][1], atoms[current_atom].orbitals[i][2]);
+        }
+        printf("at position (%f, %f, %f)\n", atoms[current_atom].pos.x, atoms[current_atom].pos.y, atoms[current_atom].pos.z);
+        current_atom++;
+    }
+
+    fclose(fp);
+
+
+    
+    return current_atom;
+}
+
+int main(int argc, char*argv[]) {
 	//srand(time(NULL));
 	//printf("%f\n", ((float)(rand()%1000))/1000);
 	//exit(0);
@@ -355,59 +477,25 @@ int main(void) {
 
 	
 	atom atoms[5];
-	int num_atoms = 2;
-	atoms[0].orbitals[0][0] = 1;
-	atoms[0].orbitals[0][1] = 0;
-	atoms[0].orbitals[0][2] = 0;
-	atoms[0].num_orbitals = 1;
-	atoms[0].pos.x = 0;
-	atoms[0].pos.y = 0;
-	atoms[0].pos.z = 0;
-	atoms[0].zeff = 1;
-	atoms[1].orbitals[0][0] = 1;
-	atoms[1].orbitals[0][1] = 0;
-	atoms[1].orbitals[0][2] = 0;
-	atoms[1].num_orbitals = 1;
-	//atoms[1].pos[0] = 1.4;
-	atoms[1].pos.x = 3;
-	atoms[1].pos.y = 0;
-	atoms[1].pos.z = 0;
-	atoms[1].zeff = 1;
+    if (argc < 2) {
+        printf("Please pass a filename\n");
+        return 1;
+    }
+	int num_atoms = read_settings(atoms, argv[1]);
 	
-    /* double hamiltonian(int nA, int lA, int qA, int nB, int lB, int qB, position posA, position read_pos, float Z, float ZB, position posB) {
 
-double wavefunction(int n, int l, int q, position read_pos, position pos, float Z) {*/ 
-    int nA = 1;
-    int lA = 0;
-    int qA = 0;
-    int nB = 1;
-    int lB = 0;
-    int qB = 0;
-    position read_p = arr_pos(1, 0, 0);
-    int Za = 1;
-    int Zb = 1;
-    position sA = arr_pos(0, 0, 0);
-    position sB = arr_pos(2, 0, 0);
-    printf("\n\n\nSETTINGS: %d %d %d %d %d %d/// %d %d\n", nA, lA, qA, nB, lB, qB, Za, Zb);
-    print_pos(read_p);
-    print_pos(sA);
-    print_pos(sB);
-    printf("ENERGY: %f \n\n\n\n\n",hamiltonian(nA, lA, qA, nB, lB, qB, sA, read_p, Za, Zb, sB) / wavefunction(nA, lA, qA, read_p, sA, Za));
     
- position A = arr_pos(0, 0, 0);
-    position B = arr_pos(0, 0, 0);
-    position read = arr_pos(5, 0, 0);
 
 	double bonding[100];
 	double antibonding[100];
 	double nonbonding[100];
 	double psd = 4;
     int current = 0;
-    for (psd = 0.5; psd < 50; psd += 0.5) { // If the upper limit is over half that of the total range scanned it fails?
+    /*for (psd = 0.5; psd < 50; psd += 0.5) { // If the upper limit is over half that of the total range scanned it fails?
 
         printf("LSLSLS %f\n", psd);
         atoms[0].pos.x = 0;
-        atoms[1].pos.x = psd;
+        atoms[1].pos.x = psd;*/
 	
         float Ss[50][50];
         float Hs[50][50];
@@ -443,14 +531,14 @@ double wavefunction(int n, int l, int q, position read_pos, position pos, float 
             }
             printf("\n\t\t");
         }
-        printf("\tS\n\t\t");
+        printf("\n\tS\n\t\t");
         for (x = 0; x < a; x++) {
             for (y = 0; y < a; y++) {
                 printf("%0.4f\t", Ss[x][y]);
             }
             printf("\n\t\t");
         }
-
+        printf("\n");
         float E;
         float prev;
         float curr;
@@ -503,10 +591,10 @@ double wavefunction(int n, int l, int q, position read_pos, position pos, float 
         bonding[current] = switching_points[0];
         antibonding[current] = switching_points[1];
         current++;
-    }
+   /* }
     int i;
 	for (i = 0; i < current; i++) {
 		printf("%f, %f, %f\n", (0.5 * i) + 0.5, bonding[i], antibonding[i]);
-	}
+	}*/
 	return 1;
 }
