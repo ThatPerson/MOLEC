@@ -208,6 +208,8 @@ double hamiltonian(int nA, int lA, int qA, int nB, int lB, int qB, position posA
     if (rB != 0 && distRB != 0) // Don't count the same atom twice.
         otheratom = - b * wavefunction(nB, lB, qB, read_pos, posB, ZB) * ZB / distRB;
 
+
+    
 	//printf("%f %f %f\n", kineticenergy, potentialenergy, otheratom);
 	double totalenergy = kineticenergy + (potentialenergy+ otheratom);
 	
@@ -259,8 +261,8 @@ pair calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, float Za, 
                 volume_element = pow(step, 3);
                 oi = wavefunction(nA, lA, qA, arr_pos(x, y, z), sA, Za) * wavefunction(nB, lB, qB, arr_pos(x, y, z), sB, Zb) * volume_element;
                 total_sum_oi += oi;
-                ham = hamiltonian(nA, lA, qA, nB, lB, qB, sA, arr_pos(x, y, z), Za, Zb, sB) * wavefunction(nB, lB, qB, arr_pos(x, y, z), sB, Zb);
-                total_sum_ham += volume_element * ham;
+                //ham = hamiltonian(nA, lA, qA, nB, lB, qB, sA, arr_pos(x, y, z), Za, Zb, sB) * wavefunction(nB, lB, qB, arr_pos(x, y, z), sB, Zb);
+                //total_sum_ham += volume_element * ham;
             }
         }
     }
@@ -321,8 +323,7 @@ void calculate_coefficients(float matr[50], int len, float * arr) {
 	float cumulative = 0;
 	float current_sum = 0;
 
-	/* It's legit I swear */
-	/* You idiot, it's the sum of squares which = 1 */
+	/* This bit isn't working!!! */
 	for (c = 0; c < pow(100, len); c++) {
 		cumulative = 0;
 		current_sum = 0;
@@ -515,6 +516,17 @@ int main(int argc, char*argv[]) {
                         Hs[a][b] = (xs.a);
                         Hs[b][a] = (xs.a);
                         Ss[b][a] = (xs.b);
+                        
+                        if (x != y) {
+                            distance = sqrt(
+                                pow(atoms[x].pos.x - atoms[y].pos.x, 2) +
+                                pow(atoms[x].pos.y - atoms[y].pos.y, 2) +
+                                pow(atoms[x].pos.z - atoms[y].pos.z, 2) 
+                            );
+                            
+                            Hs[a][b] += (atoms[x].zeff * atoms[y].zeff) / distance;
+                            Hs[b][a] += (atoms[x].zeff * atoms[y].zeff) / distance;
+                        }
 
                         b++;
                     }
