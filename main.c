@@ -270,17 +270,15 @@ pair calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, float Za, 
    // xl.a = total_sum_ham;
     xl.a = hamiltonian(nA, lA, qA, nB, lB, qB, sA, read, Za, Zb, sB) / wavefunction(nA, lA, qA, read, sA, Za);
     
-    if (sA.x != sB.x) {
+   /* if (sA.x != sB.x) {
         printf("\n\n\nSETTINGS: %d %d %d %d %d %d/// %f %f\n", nA, lA, qA, nB, lB, qB, Za, Zb);
         print_pos(read);
         print_pos(sA);
         print_pos(sB);
         printf("ENERGY: %f \n",hamiltonian(nA, lA, qA, nB, lB, qB, sA, read, Za, Zb, sB) / wavefunction(nA, lA, qA, read, sA, Za));
         printf("XLA %f\n\n\n\n\n\n", xl.a);
-    }
+    }*/
     // hamiltonian(1, 0, 0, 1, 0, 0, arr_pos(0, 0, 0), arr_pos(3, 0, 0), 1, 1, arr_pos(6, 0, 0)) / wavefunction(1, 0, 0, arr_pos(3, 0, 0), arr_pos(0, 0, 0), 1)
-    
-    printf("%f %f\n", total_sum_oi, total_sum_ham);
     
 	//printf("%lf %lf\n", numerator, denominator);
 	return xl;
@@ -323,48 +321,52 @@ void calculate_coefficients(float matr[50], int len, float * arr) {
 	float cumulative = 0;
 	float current_sum = 0;
 
-	/* This bit isn't working!!! */
-    
-    /* calculate_coefficients(red, a, coeff); */
-    
-	/*for (c = 0; c < pow(10000, len); c++) {
-		cumulative = 0;
-		current_sum = 0;
-		for (x = 0; x < len-1; x++) {
-			r = 1000 - (cumulative * 1000);
-			
-			trial_coefficients[x] = (((float)(rand()%(2*((int) r)))) / 1000)-1;
-			cumulative = cumulative + pow(trial_coefficients[x], 2);
-			current_sum += trial_coefficients[x] * matr[x];
-		}
-		trial_coefficients[len-1] = sqrt(1 - cumulative);
-		current_sum += trial_coefficients[len-1] * matr[len-1];
-		if (abs(current_sum) < current_lowest) {
-			current_lowest = abs(current_sum);
-			for (x = 0; x < len; x++) {
-				arr[x] = trial_coefficients[x];
-			}
-		}
-		
-	}*/
-    current_lowest = 10000;
-    for (trial_coefficients[0] = -1; trial_coefficients[0] < 1; trial_coefficients[0] += 0.001) {
-        // this is c0
-        trial_coefficients[1] = sqrt(1-pow(trial_coefficients[0], 2));
-        current_sum = (trial_coefficients[0] * matr[0]) + (trial_coefficients[1] * matr[1]);
-        //printf("%f, %f, %f\n", trial_coefficients[0], trial_coefficients[1], current_sum);
-        
-        if (fabs(current_sum) < current_lowest) {
-            current_lowest = fabs(current_sum);
-            for (x = 0; x < len; x++) {
-                arr[x] = trial_coefficients[x];
-            }
-        }
+    int i;
+    current_lowest = 1000;
+	for (i = 0; i < len; i++) {
+        trial_coefficients[i] = -1;
     }
-	
-	
+    trial_coefficients[0] = 0;
+    float coeff_sum = 0;
+    while (current_lowest > 0.00005) {
+       
+        coeff_sum = 0;
+        for (i = len-1; i >= 1; i--) {
+            if (trial_coefficients[i] > 1) {
+                trial_coefficients[i-1] += 0.01;
+                trial_coefficients[i] = -1;
+            }
+            coeff_sum += fabs(trial_coefficients[i]);            
+        }
+        if (trial_coefficients[0] > 1)
+            break;
+     //   if (coeff_sum > 0.5) { 
+           // printf("Trying... [");
+            current_sum = 0;
+            for (i = 0; i < len; i++) {
+           //  printf("%f, ", trial_coefficients[i]);
+                current_sum += matr[i] * trial_coefficients[i];
+            }
+          //  printf("] -> %f\n", current_sum);
+            if (fabs(current_sum) < current_lowest && coeff_sum > 0.5) {
+                current_lowest = fabs(current_sum);
+                for (x = 0; x < len; x++) {
+                    arr[x] = trial_coefficients[x];
+                }
+            }
+            //printf("%f\n", current_lowest); 
+            trial_coefficients[len-1] += 0.01;
+      //  }
+    }
+	float normalisation = 0;
+    for (x = 0; x < len; x++) {
+        normalisation += pow(arr[x], 2);
+    }
+    for (x = 0; x < len; x++) {
+        arr[x] = arr[x] / sqrt(normalisation);
+    }
 	//printf("Current Lowest: %f\n", current_lowest);
-	int i;
+	
 	
 }
 
@@ -449,7 +451,7 @@ int read_settings(atom *atoms, char * filename) {
                 case 6:
                     if (buffer[i] == 44) {
                         tmp_str[buff] = '\0';
-                        position[curr_p] = atof(tmp_str);
+                        position[curr_p] = atof(tmp_str) * 10;
                         strcpy(tmp_str, "");
                         buff = 0;
                         curr_p++;
@@ -458,7 +460,7 @@ int read_settings(atom *atoms, char * filename) {
                             break;
                         }
                     
-                    } else if (buffer[i] >= '0' && buffer[i] <= '9') {
+                    } else if ((buffer[i] >= '0' && buffer[i] <= '9') || buffer[i] == '.') {
                         tmp_str[buff] = buffer[i];
                         buff++;
                     } else if (buffer[i] == 125) {
@@ -473,12 +475,7 @@ int read_settings(atom *atoms, char * filename) {
                     
             } 
         }
-        printf("THIS ATOM;;; \n%c -- %f   %d\n", atoms[current_atom].symbol, atoms[current_atom].zeff, atoms[current_atom].num_orbitals);
 
-        for (i = 0; i < atoms[current_atom].num_orbitals; i++) {
-            printf("\t%d %d %d\n", atoms[current_atom].orbitals[i][0], atoms[current_atom].orbitals[i][1], atoms[current_atom].orbitals[i][2]);
-        }
-        printf("at position (%f, %f, %f)\n", atoms[current_atom].pos.x, atoms[current_atom].pos.y, atoms[current_atom].pos.z);
         current_atom++;
     }
 
