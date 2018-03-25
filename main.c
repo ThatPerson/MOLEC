@@ -73,9 +73,6 @@ float det(float m[50][50], int dimensions) {
 	return prod;
 }
 
-
-
-
 double wavefunction(int n, int l, int q, position read_pos, position pos, float Z) {
 	// args is [n, l, m, Z]
 	double x = pos.x - read_pos.x;
@@ -137,6 +134,11 @@ position arr_pos(double x, double y, double z) {
 	ls.y = y;
 	ls.z = z;
 	return ls;
+}
+
+void print_pos(position p) {
+    printf("(%f, %f, %f)\n", p.x, p.y, p.z);
+    return;
 }
 
 double hamiltonian(int nA, int lA, int qA, int nB, int lB, int qB, position posA, position read_pos, float Z, float ZB, position posB) {
@@ -238,7 +240,9 @@ pair calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, float Za, 
     
     /*pair calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, float Za, float Zb, position sA, position sB, int siz) {*/
     position read = arr_pos((sA.x + sB.x) / 2, (sA.y + sB.y) / 2, (sA.z + sB.z) / 2);
-    read = arr_pos(1, 0, 0);
+    if ((read.x == sA.x && read.y == sA.y && read.z == sA.z) || (read.x == sB.x && read.y == sB.y && read.z == sB.z))
+        read = arr_pos(0, 1, 0);
+    //read = arr_pos(3, 0, 0);
     float ham = hamiltonian(nA, lA, qA, nB, lB, qB, sA, read, Za, Zb, sB);
     float wav = wavefunction(nA, lA, qA, read, sA, Za);
     xl.a = ham / wav; // Eigenfunction eigenvalue pair.
@@ -248,19 +252,31 @@ pair calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, float Za, 
     position reads = arr_pos(3, 0, 0);
 
     float x, y, z, volume_element, step = 0.5, total_sum_oi = 0, oi, total_sum_ham = 0;
-    for (x = -10; x <= 10; x+=step) {
+    for (x = -30; x <= 100; x+=step) {
         for (y = -10; y <= 10; y += step) {
             for (z = -10; z <= 10; z+=step) {
                 volume_element = pow(step, 3);
                 oi = wavefunction(nA, lA, qA, arr_pos(x, y, z), sA, Za) * wavefunction(nB, lB, qB, arr_pos(x, y, z), sB, Zb) * volume_element;
                 total_sum_oi += oi;
-                ham = hamiltonian(nA, lA, qA, nB, lB, qB, sA, arr_pos(x, y, z), Za, Zb, sB) / wavefunction(nA, lA, qA, arr_pos(x, y, z), sA, Za);
-                total_sum_ham += volume_element * ham / pow(20, 3);
+                ham = hamiltonian(nA, lA, qA, nB, lB, qB, sA, arr_pos(x, y, z), Za, Zb, sB) * wavefunction(nB, lB, qB, arr_pos(x, y, z), sB, Zb);
+                total_sum_ham += volume_element * ham;
             }
         }
     }
     xl.b = total_sum_oi;
-    xl.a = total_sum_ham;
+   // xl.a = total_sum_ham;
+    xl.a = hamiltonian(nA, lA, qA, nB, lB, qB, sA, read, Za, Zb, sB) / wavefunction(nA, lA, qA, read, sA, Za);
+    
+    if (sA.x != sB.x) {
+        printf("\n\n\nSETTINGS: %d %d %d %d %d %d/// %f %f\n", nA, lA, qA, nB, lB, qB, Za, Zb);
+        print_pos(read);
+        print_pos(sA);
+        print_pos(sB);
+        printf("ENERGY: %f \n",hamiltonian(nA, lA, qA, nB, lB, qB, sA, read, Za, Zb, sB) / wavefunction(nA, lA, qA, read, sA, Za));
+        printf("XLA %f\n\n\n\n\n\n", xl.a);
+    }
+    // hamiltonian(1, 0, 0, 1, 0, 0, arr_pos(0, 0, 0), arr_pos(3, 0, 0), 1, 1, arr_pos(6, 0, 0)) / wavefunction(1, 0, 0, arr_pos(3, 0, 0), arr_pos(0, 0, 0), 1)
+    
     printf("%f %f\n", total_sum_oi, total_sum_ham);
     
 	//printf("%lf %lf\n", numerator, denominator);
@@ -358,8 +374,25 @@ int main(void) {
 	atoms[1].pos.z = 0;
 	atoms[1].zeff = 1;
 	
+    /* double hamiltonian(int nA, int lA, int qA, int nB, int lB, int qB, position posA, position read_pos, float Z, float ZB, position posB) {
 
-
+double wavefunction(int n, int l, int q, position read_pos, position pos, float Z) {*/ 
+    int nA = 1;
+    int lA = 0;
+    int qA = 0;
+    int nB = 1;
+    int lB = 0;
+    int qB = 0;
+    position read_p = arr_pos(1, 0, 0);
+    int Za = 1;
+    int Zb = 1;
+    position sA = arr_pos(0, 0, 0);
+    position sB = arr_pos(2, 0, 0);
+    printf("\n\n\nSETTINGS: %d %d %d %d %d %d/// %d %d\n", nA, lA, qA, nB, lB, qB, Za, Zb);
+    print_pos(read_p);
+    print_pos(sA);
+    print_pos(sB);
+    printf("ENERGY: %f \n\n\n\n\n",hamiltonian(nA, lA, qA, nB, lB, qB, sA, read_p, Za, Zb, sB) / wavefunction(nA, lA, qA, read_p, sA, Za));
     
  position A = arr_pos(0, 0, 0);
     position B = arr_pos(0, 0, 0);
@@ -370,7 +403,7 @@ int main(void) {
 	double nonbonding[100];
 	double psd = 4;
     int current = 0;
-    for (psd = 0.5; psd < 50; psd += 0.5) {
+    for (psd = 0.5; psd < 50; psd += 0.5) { // If the upper limit is over half that of the total range scanned it fails?
 
         printf("LSLSLS %f\n", psd);
         atoms[0].pos.x = 0;
@@ -403,19 +436,19 @@ int main(void) {
             }
         }
 
-        printf("H\n");
+        printf("\tH\n\t\t");
         for (x = 0; x < a; x++) {
             for (y = 0; y < a; y++) {
                 printf("%0.4f\t", Hs[x][y]);
             }
-            printf("\n");
+            printf("\n\t\t");
         }
-        printf("S\n");
+        printf("\tS\n\t\t");
         for (x = 0; x < a; x++) {
             for (y = 0; y < a; y++) {
                 printf("%0.4f\t", Ss[x][y]);
             }
-            printf("\n");
+            printf("\n\t\t");
         }
 
         float E;
