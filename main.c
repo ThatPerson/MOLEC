@@ -204,11 +204,12 @@ double hamiltonian(int nA, int lA, int qA, int nB, int lB, int qB, position posA
 	//double b = 1;
 	double kineticenergy = - a * (dxsq + dysq + dzsq);
     if (distRA != 0)
+        //printf("%f %f %f\n", distRA, wavefunction(nA, lA, qA, read_pos, posA, Z), Z);
         potentialenergy = - b * wavefunction(nA, lA, qA, read_pos, posA, Z) * Z / distRA;
     if (rB != 0 && distRB != 0) // Don't count the same atom twice.
         otheratom = - b * wavefunction(nB, lB, qB, read_pos, posB, ZB) * ZB / distRB;
 
-
+    //printf("%f %f::: %f %f %f\n", Z, ZB, kineticenergy, potentialenergy, otheratom);
     
 	//printf("%f %f %f\n", kineticenergy, potentialenergy, otheratom);
 	double totalenergy = kineticenergy + (potentialenergy+ otheratom);
@@ -244,7 +245,7 @@ pair calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, float Za, 
     /*pair calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, float Za, float Zb, position sA, position sB, int siz) {*/
     position read = arr_pos((sA.x + sB.x) / 2, (sA.y + sB.y) / 2, (sA.z + sB.z) / 2);
     if ((read.x == sA.x && read.y == sA.y && read.z == sA.z) || (read.x == sB.x && read.y == sB.y && read.z == sB.z))
-        read = arr_pos(0, 1, 0);
+        read = arr_pos(sA.x, 1, 1);
     //read = arr_pos(3, 0, 0);
     float ham = hamiltonian(nA, lA, qA, nB, lB, qB, sA, read, Za, Zb, sB);
     float wav = wavefunction(nA, lA, qA, read, sA, Za);
@@ -254,19 +255,21 @@ pair calculate_energy(int nA, int lA, int qA, int nB, int lB, int qB, float Za, 
     position B = arr_pos(2, 0, 0);
     position reads = arr_pos(3, 0, 0);
 
-    float x, y, z, volume_element, step = 0.5, total_sum_oi = 0, oi, total_sum_ham = 0;
+    float x, y, z, volume_element, step = 0.5, total_sum_oi = 0, oi, total_sum_ham = 0, total_volume = 0;
     for (x = -30; x <= 100; x+=step) {
         for (y = -10; y <= 10; y += step) {
             for (z = -10; z <= 10; z+=step) {
                 volume_element = pow(step, 3);
                 oi = wavefunction(nA, lA, qA, arr_pos(x, y, z), sA, Za) * wavefunction(nB, lB, qB, arr_pos(x, y, z), sB, Zb) * volume_element;
                 total_sum_oi += oi;
+                total_volume += volume_element;
                 //ham = hamiltonian(nA, lA, qA, nB, lB, qB, sA, arr_pos(x, y, z), Za, Zb, sB) * wavefunction(nB, lB, qB, arr_pos(x, y, z), sB, Zb);
                 //total_sum_ham += volume_element * ham;
             }
         }
     }
     xl.b = total_sum_oi;
+    //printf("TV %f\n", total_volume);
    // xl.a = total_sum_ham;
     xl.a = hamiltonian(nA, lA, qA, nB, lB, qB, sA, read, Za, Zb, sB) / wavefunction(nA, lA, qA, read, sA, Za);
     
@@ -328,7 +331,7 @@ void calculate_coefficients(float matr[50], int len, float * arr) {
     }
     trial_coefficients[0] = 0;
     float coeff_sum = 0;
-    while (current_lowest > 0.00005) {
+    while (current_lowest > 0.005) {
        
         coeff_sum = 0;
         for (i = len-1; i >= 1; i--) {
@@ -340,14 +343,14 @@ void calculate_coefficients(float matr[50], int len, float * arr) {
         }
         if (trial_coefficients[0] > 1)
             break;
-     //   if (coeff_sum > 0.5) { 
-           // printf("Trying... [");
+        //if (coeff_sum > 0.5) { 
+            //printf("Trying... [");
             current_sum = 0;
             for (i = 0; i < len; i++) {
-           //  printf("%f, ", trial_coefficients[i]);
+             //printf("%0.2f / %0.2f, ", trial_coefficients[i], matr[i]);
                 current_sum += matr[i] * trial_coefficients[i];
             }
-          //  printf("] -> %f\n", current_sum);
+            //printf("] -> %f\n", current_sum);
             if (fabs(current_sum) < current_lowest && coeff_sum > 0.5) {
                 current_lowest = fabs(current_sum);
                 for (x = 0; x < len; x++) {
@@ -356,7 +359,7 @@ void calculate_coefficients(float matr[50], int len, float * arr) {
             }
             //printf("%f\n", current_lowest); 
             trial_coefficients[len-1] += 0.01;
-      //  }
+        //}
     }
 	float normalisation = 0;
     for (x = 0; x < len; x++) {
@@ -414,7 +417,7 @@ int read_settings(atom *atoms, char * filename) {
                         mode++; 
                         tmp_str[buff] = '\0';
                         atoms[current_atom].zeff = atof(tmp_str);
-                    } else if (buffer[i] >= '0' && buffer[i] <= '9') {
+                    } else if ((buffer[i] >= '0' && buffer[i] <= '9') || buffer[i] == '.') {
                         tmp_str[buff] = buffer[i];
                         buff++;
                     }
